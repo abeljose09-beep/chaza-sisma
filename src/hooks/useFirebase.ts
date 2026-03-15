@@ -10,15 +10,14 @@ export const useFirebase = () => {
 
   useEffect(() => {
     // Auth State
-    const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const userRef = doc(db, 'users', firebaseUser.uid);
-        const unsubProfile = onSnapshot(userRef, (snapshot) => {
+        return onSnapshot(userRef, (snapshot) => {
           if (snapshot.exists()) {
             setUser({ uid: firebaseUser.uid, ...snapshot.data() } as UserProfile);
           }
         });
-        return () => unsubProfile();
       } else {
         setUser(null);
       }
@@ -59,13 +58,26 @@ export const useFirebase = () => {
   const addOrder = async (orderData: any) => {
     try {
       await runTransaction(db, async (transaction) => {
+        // --- 1. ALL READS FIRST ---
         const counterRef = doc(db, 'metadata', 'orderCounter');
         const counterDoc = await transaction.get(counterRef);
+        
+        const clientRef = doc(db, 'users', orderData.clientId);
+        const clientSnap = await transaction.get(clientRef);
+
+        const productSnaps = [];
+        for (const item of orderData.items) {
+          const prodRef = doc(db, 'products', item.id);
+          productSnaps.push({ ref: prodRef, snap: await transaction.get(prodRef), item });
+        }
+
+        // --- 2. LOGIC ---
         let nextNum = 1;
         if (counterDoc.exists()) {
           nextNum = (counterDoc.data().count || 0) + 1;
         }
-        
+
+        // --- 3. ALL WRITES AFTER ---
         const orderRef = doc(collection(db, 'orders'));
         transaction.set(orderRef, {
           ...orderData,
@@ -76,50 +88,54 @@ export const useFirebase = () => {
         transaction.set(counterRef, { count: nextNum }, { merge: true });
 
         // Update stocks
-        for (const item of orderData.items) {
-          const prodRef = doc(db, 'products', item.id);
-          const prodSnap = await transaction.get(prodRef);
-          if (prodSnap.exists()) {
-            transaction.update(prodRef, { stock: prodSnap.data().stock - item.quantity });
+        for (const { ref, snap, item } of productSnaps) {
+          if (snap.exists()) {
+            transaction.update(ref, { stock: snap.data().stock - item.quantity });
           }
         }
 
         // Update debt
-        const clientRef = doc(db, 'users', orderData.clientId);
-        const clientSnap = await transaction.get(clientRef);
         if (clientSnap.exists()) {
           const currentDebt = clientSnap.data().debt || 0;
           transaction.update(clientRef, { debt: currentDebt + orderData.total });
         }
       });
       return true;
-    } catch (e) {
-      console.error("Order Transaction Error:", e);
-      throw e;
+    } catch (e: any) {
+      console.error("DEBUG ORDER ERROR:", e);
+      throw new Error(e.message || "Error desconocido en Firebase");
     }
   };
 
   const markMultipleOrdersAsPaid = async (orderIds: string[], clientId: string, totalAmount: number) => {
     try {
       await runTransaction(db, async (transaction) => {
-        // 1. Mark each order as paid
-        for (const orderId of orderIds) {
-          const orderRef = doc(db, 'orders', orderId);
-          transaction.update(orderRef, { status: 'paid' });
-        }
-
-        // 2. Reduce the client's total debt atomically
+        // READS
         const clientRef = doc(db, 'users', clientId);
         const clientSnap = await transaction.get(clientRef);
+        
+        const orderSnaps = [];
+        for (const id of orderIds) {
+          const oRef = doc(db, 'orders', id);
+          orderSnaps.push({ ref: oRef, snap: await transaction.get(oRef) });
+        }
+
+        // WRITES
+        for (const { ref, snap } of orderSnaps) {
+          if (snap.exists() && snap.data().status !== 'paid') {
+            transaction.update(ref, { status: 'paid' });
+          }
+        }
+
         if (clientSnap.exists()) {
           const currentDebt = clientSnap.data().debt || 0;
           transaction.update(clientRef, { debt: Math.max(0, currentDebt - totalAmount) });
         }
       });
       return true;
-    } catch (e) {
-      console.error("Payment Transaction Error:", e);
-      throw e;
+    } catch (e: any) {
+      console.error("DEBUG PAYMENT ERROR:", e);
+      throw new Error(e.message || "Error en transacción de pago");
     }
   };
 

@@ -34,9 +34,9 @@ export const POS: React.FC = () => {
 
       clearCart();
       alert("Pedido registrado exitosamente");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Error al procesar el pedido");
+      alert("Error al procesar el pedido: " + error.message);
     }
   };
 
