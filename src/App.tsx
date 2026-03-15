@@ -36,7 +36,12 @@ export const App: React.FC = () => {
           </button>
         </div>
         <div style={{ textAlign: 'center', marginTop: '4rem', marginBottom: '2rem' }}>
-          <img src="/chaza-logo.png" alt="Chaza Logo" className="logo-img" style={{ height: '140px', filter: 'drop-shadow(0 10px 20px rgba(0,45,75,0.15))' }} />
+          <img 
+            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'} 
+            alt="Chaza Logo" 
+            className="logo-img" 
+            style={{ height: '120px', maxWidth: '90%', objectFit: 'contain', filter: 'drop-shadow(0 8px 24px rgba(0,45,75,0.15))' }} 
+          />
         </div>
         <Login />
       </div>
@@ -56,7 +61,12 @@ export const App: React.FC = () => {
 
       <nav className="nav animate-fade-in" style={{ backgroundColor: 'var(--surface)', padding: '1.5rem', borderRadius: '24px', marginBottom: '2rem', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img src="/chaza-logo.png" alt="Logo" className="logo-img" style={{ height: '54px' }} />
+          <img 
+            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'} 
+            alt="Logo" 
+            className="logo-img" 
+            style={{ height: '48px', objectFit: 'contain' }} 
+          />
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 

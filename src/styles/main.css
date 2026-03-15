@@ -23,14 +23,15 @@
 }
 
 [data-theme='dark'] {
-  --background: #001a2c;
-  --surface: #002d4b;
+  --background: #111d2e;
+  --surface: #1a2d42;
   --text: #e1f1ff;
   --text-h: #ffffff;
   --text-muted: #8bb3cf;
-  --border: #00426d;
+  --border: #263d54;
   --logo-text: #ffffff;
-  --shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+  --shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 24px -6px rgba(0, 0, 0, 0.5);
 }
 
 * {
