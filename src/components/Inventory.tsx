@@ -55,11 +55,14 @@ export const Inventory: React.FC = () => {
     setIsCapturing(false);
   };
 
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     await addProduct(newProduct);
     setNewProduct({ name: '', price: 0, stock: 0, category: '', imageUrl: '' });
-    setShowAdd(false);
+    // Keep form open as requested
+    nameInputRef.current?.focus();
   };
 
   const filteredProducts = products.filter(p => 
@@ -83,6 +86,7 @@ export const Inventory: React.FC = () => {
             <div>
               <label>Nombre del Artículo</label>
               <input 
+                ref={nameInputRef}
                 required 
                 value={newProduct.name} 
                 onChange={e => setNewProduct({...newProduct, name: e.target.value})}
