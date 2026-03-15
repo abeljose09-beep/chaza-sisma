@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
+import { useEffect } from 'react';
 import { useFirebase } from '../hooks/useFirebase';
 import { Search, Plus, Minus, ShoppingBag, ShoppingCart } from 'lucide-react';
 
 export const POS: React.FC = () => {
-  const { products, clients, activeCart, addToCart, removeFromCart, clearCart, selectedClientId, setSelectedClient } = useStore();
+  const { products, clients, activeCart, addToCart, removeFromCart, clearCart, selectedClientId, setSelectedClient, user } = useStore();
   const { updateProduct, addOrder } = useFirebase();
   const [searchTerm, setSearchTerm] = useState('');
+
+  const isClient = user?.role === 'client';
+
+  useEffect(() => {
+    if (isClient && user) {
+      setSelectedClient(user.uid);
+    }
+  }, [isClient, user, setSelectedClient]);
 
   const cartTotal = activeCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -50,16 +59,22 @@ export const POS: React.FC = () => {
           <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
              <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '0.8rem' }}>Cliente</label>
-                <select 
-                  value={selectedClientId || ''} 
-                  onChange={e => setSelectedClient(e.target.value)}
-                  style={{ marginTop: '0.25rem' }}
-                >
-                  <option value="">Seleccionar Cliente...</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                {isClient ? (
+                  <div style={{ padding: '0.75rem', background: 'var(--background)', borderRadius: 'var(--radius)', marginTop: '0.25rem', fontWeight: 'bold' }}>
+                    {user?.name} (Tú)
+                  </div>
+                ) : (
+                  <select 
+                    value={selectedClientId || ''} 
+                    onChange={e => setSelectedClient(e.target.value)}
+                    style={{ marginTop: '0.25rem' }}
+                  >
+                    <option value="">Seleccionar Cliente...</option>
+                    {clients.map(c => (
+                      <option key={c.uid} value={c.uid}>{c.name}</option>
+                    ))}
+                  </select>
+                )}
              </div>
              <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '0.8rem' }}>Buscar Producto</label>

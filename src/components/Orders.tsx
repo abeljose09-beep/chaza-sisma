@@ -7,22 +7,36 @@ import { CheckCircle, Clock, Receipt } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const { clients } = useStore();
+  const { clients, user } = useStore();
 
   useEffect(() => {
-    const q = query(collection(db, 'orders'), where('status', '==', 'pending'));
+    let q = query(collection(db, 'orders'), where('status', '==', 'pending'));
+    
+    // If client, only show their items
+    if (user?.role === 'client') {
+      q = query(collection(db, 'orders'), 
+        where('status', '==', 'pending'),
+        where('clientId', '==', user.uid)
+      );
+    }
+
     const unsub = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
       setOrders(items);
     });
     return () => unsub();
-  }, []);
+  }, [user]);
 
   const markAsPaid = async (orderId: string) => {
     await updateDoc(doc(db, 'orders', orderId), { status: 'paid' });
   };
 
-  const getClientName = (id: string) => clients.find(c => c.id === id)?.name || 'Cliente Desconocido';
+  const getClientName = (id: string) => {
+    if (id === user?.uid) return user.name;
+    return clients.find(c => c.uid === id)?.name || 'Cliente Desconocido';
+  };
+
+  const isAtLeastAdmin = user?.role === 'admin' || user?.role === 'superuser';
 
   // Group orders by client
   const clientTubs = orders.reduce((acc, order) => {
@@ -33,7 +47,9 @@ export const Orders: React.FC = () => {
 
   return (
     <div className="orders-section">
-      <h2 style={{ marginBottom: '1.5rem' }}>Cuentas de Cobro</h2>
+      <h2 style={{ marginBottom: '1.5rem' }}>
+        {isAtLeastAdmin ? 'Gestión de Cobros' : 'Mis Cuentas Pendientes'}
+      </h2>
 
       <div className="grid">
         {Object.entries(clientTubs).map(([clientId, clientOrders]) => {
@@ -72,17 +88,26 @@ export const Orders: React.FC = () => {
                     ${clientTotal.toLocaleString()}
                   </p>
                 </div>
-                <button 
-                  className="btn btn-primary" 
-                  style={{ width: '100%', background: 'var(--secondary)' }}
-                  onClick={() => {
-                    if (confirm(`¿Marcar todas las cuentas de ${getClientName(clientId)} como pagadas?`)) {
-                      clientOrders.forEach(o => markAsPaid(o.id));
-                    }
-                  }}
-                >
-                  <CheckCircle size={18} /> Marcar como Pagado
-                </button>
+                
+                {isAtLeastAdmin && (
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', background: 'var(--secondary)' }}
+                    onClick={() => {
+                      if (confirm(`¿Marcar todas las cuentas de ${getClientName(clientId)} como pagadas?`)) {
+                        clientOrders.forEach(o => markAsPaid(o.id));
+                      }
+                    }}
+                  >
+                    <CheckCircle size={18} /> Marcar como Pagado
+                  </button>
+                )}
+
+                {!isAtLeastAdmin && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Por favor, contacta al administrador para pagar.
+                  </p>
+                )}
               </div>
             </div>
           );
@@ -90,7 +115,7 @@ export const Orders: React.FC = () => {
         {orders.length === 0 && (
           <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
             <Receipt size={60} style={{ margin: '0 auto 1.5rem', opacity: 0.2 }} />
-            <p>No hay cuentas pendientes de cobro</p>
+            <p>{isAtLeastAdmin ? 'No hay cuentas pendientes de cobro' : 'No tienes cuentas pendientes. ¡Estás al día!'}</p>
           </div>
         )}
       </div>

@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Users, Package, ShoppingCart, Receipt, ShieldAlert } from 'lucide-react';
+import { Users, Package, ShoppingCart, Receipt, ShieldAlert, TrendingUp } from 'lucide-react';
 import { Inventory } from './components/Inventory';
 import { Clients } from './components/Clients';
 import { POS } from './components/POS';
 import { Orders } from './components/Orders';
 import { Login } from './components/Login';
+import { Reports } from './components/Reports';
 import { useStore } from './store/useStore';
 import { useFirebase } from './hooks/useFirebase';
 import './styles/main.css';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'clients' | 'orders'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'clients' | 'orders' | 'reports'>('pos');
   const { user } = useStore();
   
   // Initialize Firebase sync
@@ -50,6 +51,13 @@ export const App: React.FC = () => {
             <Package size={18} /> <span className="hide-mobile">Inventario</span>
           </button>
 
+          <button 
+            className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveTab('orders')}
+          >
+            <Receipt size={18} /> <span className="hide-mobile">Mis Cuentas</span>
+          </button>
+
           {isAtLeastAdmin && (
             <>
               <button 
@@ -59,10 +67,10 @@ export const App: React.FC = () => {
                 <Users size={18} /> <span className="hide-mobile">Clientes</span>
               </button>
               <button 
-                className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setActiveTab('orders')}
+                className={`btn ${activeTab === 'reports' ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setActiveTab('reports')}
               >
-                <Receipt size={18} /> <span className="hide-mobile">Cuentas</span>
+                <TrendingUp size={18} /> <span className="hide-mobile">Informes</span>
               </button>
             </>
           )}
@@ -80,6 +88,7 @@ export const App: React.FC = () => {
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'clients' && <Clients />}
         {activeTab === 'orders' && <Orders />}
+        {activeTab === 'reports' && <Reports />}
       </main>
 
       <style>{`

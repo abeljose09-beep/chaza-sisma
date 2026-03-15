@@ -61,14 +61,17 @@ export const useFirebase = () => {
   };
 
   const deleteProduct = async (id: string) => {
-    // In a real app we might want to archive instead
     console.log("Deleting product", id);
-    // await deleteDoc(doc(db, 'products', id));
   };
 
   const addOrder = async (order: any) => {
     await addDoc(collection(db, 'orders'), order);
   };
 
-  return { addProduct, updateProduct, deleteProduct, addOrder };
+  const addClient = async (client: { name: string, email: string, phone: string }) => {
+    const newRef = doc(collection(db, 'users'));
+    await setDoc(newRef, { ...client, uid: newRef.id, role: 'client', debt: 0 });
+  };
+
+  return { addProduct, updateProduct, deleteProduct, addOrder, addClient };
 };
