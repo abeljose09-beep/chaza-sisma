@@ -9,7 +9,7 @@ import { CheckCircle, Clock, Receipt, Hash } from 'lucide-react';
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const { clients, user } = useStore();
-  const { markOrderAsPaid } = useFirebase();
+  const { markMultipleOrdersAsPaid } = useFirebase();
 
   useEffect(() => {
     let q = query(collection(db, 'orders'), where('status', '==', 'pending'));
@@ -42,6 +42,19 @@ export const Orders: React.FC = () => {
     return acc;
   }, {} as Record<string, Order[]>);
 
+  const handlePayAll = async (clientId: string, clientOrders: Order[], total: number) => {
+    if (!confirm(`¿Marcar todas las cuentas de ${getClientName(clientId)} ($${total.toLocaleString()}) como pagadas?`)) return;
+
+    try {
+      const orderIds = clientOrders.map(o => o.id);
+      await markMultipleOrdersAsPaid(orderIds, clientId, total);
+      alert("Cuentas marcadas como pagadas correctamente");
+    } catch (error) {
+      console.error(error);
+      alert("Error al procesar el pago");
+    }
+  };
+
   return (
     <div className="orders-section">
       <h2 style={{ marginBottom: '1.5rem' }}>
@@ -67,7 +80,7 @@ export const Orders: React.FC = () => {
                   <div key={order.id} style={{ fontSize: '0.85rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--background)', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Hash size={14} /> {order.orderNum || 'S/N'}
+                        <Hash size={14} /> {order.orderNum || '--'}
                       </span>
                       <span>${order.total.toLocaleString()}</span>
                     </div>
@@ -95,13 +108,7 @@ export const Orders: React.FC = () => {
                   <button 
                     className="btn btn-primary" 
                     style={{ width: '100%', background: 'var(--secondary)' }}
-                    onClick={async () => {
-                      if (confirm(`¿Marcar todas las cuentas de ${getClientName(clientId)} ($${clientTotal.toLocaleString()}) como pagadas?`)) {
-                        for (const o of clientOrders) {
-                          await markOrderAsPaid(o.id, clientId, o.total);
-                        }
-                      }
-                    }}
+                    onClick={() => handlePayAll(clientId, clientOrders, clientTotal)}
                   >
                     <CheckCircle size={18} /> Marcar todo como Pagado
                   </button>
