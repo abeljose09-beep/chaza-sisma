@@ -20,7 +20,10 @@ export const App: React.FC = () => {
   if (!user) {
     return (
       <div className="app-container">
-        <h1 style={{ textAlign: 'center', marginTop: '2rem', color: 'var(--primary)' }}>Chaza Sisma</h1>
+        <div style={{ textAlign: 'center', marginTop: '3rem', marginBottom: '1rem' }}>
+          <img src="/logo.png" alt="Logo" style={{ height: '60px', marginBottom: '0.5rem' }} />
+          <h1 style={{ color: 'var(--primary)', margin: 0 }}>Chaza Sisma</h1>
+        </div>
         <Login />
       </div>
     );
@@ -35,7 +38,10 @@ export const App: React.FC = () => {
       </header>
 
       <nav className="nav animate-fade-in">
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>Chaza Sisma</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <img src="/logo.png" alt="Logo" style={{ height: '32px' }} />
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--primary)', margin: 0 }}>Chaza Sisma</h1>
+        </div>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           <button 
             className={`btn ${activeTab === 'pos' ? 'btn-primary' : 'btn-ghost'}`}
