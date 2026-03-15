@@ -1,16 +1,24 @@
+export type UserRole = 'superuser' | 'admin' | 'client';
+
+export interface UserProfile {
+  uid: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  phone?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
   category?: string;
+  imageUrl?: string;
 }
 
-export interface Client {
-  id: string;
-  name: string;
-  phone?: string;
-  debt: number; // For the "cuentas de cobro" if they buy over time
+export interface Client extends UserProfile {
+  debt: number;
 }
 
 export interface CartItem extends Product {

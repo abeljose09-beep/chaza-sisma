@@ -1,13 +1,15 @@
 import { create } from 'zustand';
-import type { Product, Client, CartItem } from '../types';
+import type { Product, Client, CartItem, UserProfile } from '../types';
 
 interface StoreState {
+  user: UserProfile | null;
   products: Product[];
   clients: Client[];
   activeCart: CartItem[];
   selectedClientId: string | null;
   
   // Actions
+  setUser: (user: UserProfile | null) => void;
   setProducts: (products: Product[]) => void;
   setClients: (clients: Client[]) => void;
   addToCart: (product: Product, quantity: number) => void;
@@ -18,11 +20,13 @@ interface StoreState {
 }
 
 export const useStore = create<StoreState>((set) => ({
+  user: null,
   products: [],
   clients: [],
   activeCart: [],
   selectedClientId: null,
 
+  setUser: (user) => set({ user }),
   setProducts: (products) => set({ products }),
   setClients: (clients) => set({ clients }),
   
