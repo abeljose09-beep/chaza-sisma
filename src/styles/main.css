@@ -1,7 +1,8 @@
 :root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --secondary: #10b981;
+  --primary: #00AADC;
+  --primary-hover: #0092bd;
+  --secondary: #74C044;
+  --secondary-hover: #61a63a;
   --danger: #ef4444;
   --background: #f8fafc;
   --surface: #ffffff;
@@ -110,7 +111,7 @@ input, select {
 input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 170, 220, 0.2);
 }
 
 .badge {
