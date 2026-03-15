@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 import { TrendingUp, DollarSign, Package, Calendar } from 'lucide-react';
 import type { Order } from '../types';
 
@@ -9,9 +9,10 @@ export const Reports: React.FC = () => {
   const [timeframe, setTimeframe] = useState<'today' | 'week'>('today');
 
   useEffect(() => {
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'orders'));
     const unsub = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+      items.sort((a, b) => b.createdAt - a.createdAt);
       setOrders(items);
     });
     return () => unsub();

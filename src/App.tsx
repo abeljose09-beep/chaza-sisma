@@ -30,14 +30,13 @@ export const App: React.FC = () => {
   if (!user) {
     return (
       <div className="app-container">
-        <div style={{ position: 'fixed', top: '1rem', right: '1rem' }}>
-          <button className="btn btn-ghost" onClick={toggleTheme} style={{ padding: '0.5rem' }}>
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        <div style={{ position: 'fixed', top: '1.5rem', right: '1.5rem' }}>
+          <button className="btn btn-ghost" onClick={toggleTheme} style={{ padding: '0.75rem', borderRadius: '50%' }}>
+            {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
           </button>
         </div>
-        <div style={{ textAlign: 'center', marginTop: '3rem', marginBottom: '1rem' }}>
-          <img src="/logo.png" alt="Logo" className="logo-img" style={{ height: '70px', marginBottom: '0.5rem' }} />
-          <h1 className="logo-title" style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Chaza Sisma</h1>
+        <div style={{ textAlign: 'center', marginTop: '4rem', marginBottom: '2rem' }}>
+          <img src="/chaza-logo.png" alt="Chaza Logo" className="logo-img" style={{ height: '140px', filter: 'drop-shadow(0 10px 20px rgba(0,45,75,0.15))' }} />
         </div>
         <Login />
       </div>
@@ -48,19 +47,18 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-container">
-      <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.5rem 0' }}>
-        <button className="btn btn-ghost" onClick={toggleTheme} style={{ marginRight: '0.5rem' }}>
-          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+      <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem 0', alignItems: 'center', gap: '1rem' }}>
+        <button className="btn btn-ghost" onClick={toggleTheme} style={{ padding: '0.5rem', borderRadius: '50%' }}>
+          {theme === 'light' ? <Moon size={22} /> : <Sun size={22} />}
         </button>
         <Login />
       </header>
 
-      <nav className="nav animate-fade-in">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <img src="/logo.png" alt="Logo" className="logo-img" style={{ height: '36px' }} />
-          <h1 className="logo-title" style={{ fontSize: '1.5rem', fontWeight: '900', margin: 0 }}>Chaza Sisma</h1>
+      <nav className="nav animate-fade-in" style={{ backgroundColor: 'var(--surface)', padding: '1.5rem', borderRadius: '24px', marginBottom: '2rem', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img src="/chaza-logo.png" alt="Logo" className="logo-img" style={{ height: '54px' }} />
         </div>
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 
             className={`btn ${activeTab === 'pos' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setActiveTab('pos')}
@@ -101,7 +99,7 @@ export const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="animate-fade-in" style={{ flex: 1 }}>
+      <main className="animate-fade-in" style={{ flex: 1, paddingBottom: '3rem' }}>
         {activeTab === 'pos' && <POS />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'clients' && <Clients />}
@@ -110,10 +108,10 @@ export const App: React.FC = () => {
       </main>
 
       <style>{`
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           .hide-mobile { display: none; }
           .nav { flex-direction: column; gap: 1.5rem; align-items: center; text-align: center; }
-          .btn { flex: 1; padding: 0.6rem; }
+          .btn { flex: 1; padding: 0.75rem; font-size: 0.8rem; }
         }
       `}</style>
     </div>
