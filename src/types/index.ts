@@ -27,6 +27,7 @@ export interface CartItem extends Product {
 
 export interface Order {
   id: string;
+  orderNum: number;
   clientId: string;
   items: CartItem[];
   total: number;

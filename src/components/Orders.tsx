@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
+import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
-import { CheckCircle, Clock, Receipt } from 'lucide-react';
+import { CheckCircle, Clock, Receipt, Hash } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const { clients, user } = useStore();
+  const { markOrderAsPaid } = useFirebase();
 
   useEffect(() => {
     let q = query(collection(db, 'orders'), where('status', '==', 'pending'));
     
-    // If client, only show their items
     if (user?.role === 'client') {
       q = query(collection(db, 'orders'), 
         where('status', '==', 'pending'),
@@ -27,18 +28,14 @@ export const Orders: React.FC = () => {
     return () => unsub();
   }, [user]);
 
-  const markAsPaid = async (orderId: string) => {
-    await updateDoc(doc(db, 'orders', orderId), { status: 'paid' });
-  };
-
   const getClientName = (id: string) => {
     if (id === user?.uid) return user.name;
-    return clients.find(c => c.uid === id)?.name || 'Cliente Desconocido';
+    const client = clients.find(c => c.uid === id);
+    return client ? client.name : 'Cliente Desconocido';
   };
 
   const isAtLeastAdmin = user?.role === 'admin' || user?.role === 'superuser';
 
-  // Group orders by client
   const clientTubs = orders.reduce((acc, order) => {
     if (!acc[order.clientId]) acc[order.clientId] = [];
     acc[order.clientId].push(order);
@@ -65,16 +62,21 @@ export const Orders: React.FC = () => {
                 </span>
               </div>
 
-              <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '1rem' }}>
-                {clientOrders.map(order => (
-                  <div key={order.id} style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Pedido {new Date(order.createdAt).toLocaleTimeString()}</span>
-                      <span style={{ fontWeight: 'bold' }}>${order.total.toLocaleString()}</span>
+              <div style={{ maxHeight: '250px', overflowY: 'auto', marginBottom: '1rem' }}>
+                {clientOrders.sort((a,b) => (b.orderNum || 0) - (a.orderNum || 0)).map(order => (
+                  <div key={order.id} style={{ fontSize: '0.85rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--background)', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Hash size={14} /> {order.orderNum || 'S/N'}
+                      </span>
+                      <span>${order.total.toLocaleString()}</span>
                     </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      {new Date(order.createdAt).toLocaleString()}
+                    </p>
                     <ul style={{ listStyle: 'none', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
                       {order.items.map((item, idx) => (
-                        <li key={idx}>{item.quantity}x {item.name}</li>
+                        <li key={idx} style={{ fontSize: '0.8rem' }}>{item.quantity}x {item.name}</li>
                       ))}
                     </ul>
                   </div>
@@ -93,19 +95,21 @@ export const Orders: React.FC = () => {
                   <button 
                     className="btn btn-primary" 
                     style={{ width: '100%', background: 'var(--secondary)' }}
-                    onClick={() => {
-                      if (confirm(`¿Marcar todas las cuentas de ${getClientName(clientId)} como pagadas?`)) {
-                        clientOrders.forEach(o => markAsPaid(o.id));
+                    onClick={async () => {
+                      if (confirm(`¿Marcar todas las cuentas de ${getClientName(clientId)} ($${clientTotal.toLocaleString()}) como pagadas?`)) {
+                        for (const o of clientOrders) {
+                          await markOrderAsPaid(o.id, clientId, o.total);
+                        }
                       }
                     }}
                   >
-                    <CheckCircle size={18} /> Marcar como Pagado
+                    <CheckCircle size={18} /> Marcar todo como Pagado
                   </button>
                 )}
 
                 {!isAtLeastAdmin && (
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                    Por favor, contacta al administrador para pagar.
+                    Por favor, contacta al administrador para pagar su cuenta.
                   </p>
                 )}
               </div>

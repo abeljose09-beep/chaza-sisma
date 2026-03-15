@@ -1,18 +1,20 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
-import { Plus, Edit2, Search, Camera, X } from 'lucide-react';
+import { Plus, Edit2, Search, Camera, X, Trash2 } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
   const { products, user } = useStore();
-  const { addProduct } = useFirebase();
+  const { addProduct, updateProduct, deleteProduct } = useFirebase();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   
-  const [newProduct, setNewProduct] = useState({ 
+  const [formData, setFormData] = useState({ 
     name: '', 
     price: 0, 
     stock: 0, 
@@ -41,7 +43,7 @@ export const Inventory: React.FC = () => {
         canvasRef.current.height = videoRef.current.videoHeight;
         context.drawImage(videoRef.current, 0, 0);
         const dataUrl = canvasRef.current.toDataURL('image/jpeg');
-        setNewProduct({ ...newProduct, imageUrl: dataUrl });
+        setFormData({ ...formData, imageUrl: dataUrl });
         stopCamera();
       }
     }
@@ -55,14 +57,35 @@ export const Inventory: React.FC = () => {
     setIsCapturing(false);
   };
 
-  const nameInputRef = useRef<HTMLInputElement>(null);
-
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await addProduct(newProduct);
-    setNewProduct({ name: '', price: 0, stock: 0, category: '', imageUrl: '' });
-    // Keep form open as requested
+    if (editingId) {
+      await updateProduct(editingId, formData);
+      setEditingId(null);
+    } else {
+      await addProduct(formData);
+    }
+    setFormData({ name: '', price: 0, stock: 0, category: '', imageUrl: '' });
     nameInputRef.current?.focus();
+    if (editingId) setShowAdd(false);
+  };
+
+  const handleEdit = (product: any) => {
+    setEditingId(product.id);
+    setFormData({
+      name: product.name,
+      price: product.price,
+      stock: product.stock,
+      category: product.category || '',
+      imageUrl: product.imageUrl || ''
+    });
+    setShowAdd(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (confirm(`¿Eliminar ${name}?`)) {
+      await deleteProduct(id);
+    }
   };
 
   const filteredProducts = products.filter(p => 
@@ -74,22 +97,27 @@ export const Inventory: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
         <h2>Inventario</h2>
         {isAdmin && (
-          <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
+          <button className="btn btn-primary" onClick={() => {
+            setEditingId(null);
+            setFormData({ name: '', price: 0, stock: 0, category: '', imageUrl: '' });
+            setShowAdd(!showAdd);
+          }}>
             <Plus size={20} /> Nuevo Artículo
           </button>
         )}
       </div>
 
       {showAdd && isAdmin && (
-        <form className="card animate-fade-in" onSubmit={handleAdd} style={{ marginBottom: '2rem' }}>
-          <div className="grid">
+        <form className="card animate-fade-in" onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
+          <h3>{editingId ? 'Editar Artículo' : 'Nuevo Artículo'}</h3>
+          <div className="grid" style={{ marginTop: '1rem' }}>
             <div>
               <label>Nombre del Artículo</label>
               <input 
                 ref={nameInputRef}
                 required 
-                value={newProduct.name} 
-                onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                value={formData.name} 
+                onChange={e => setFormData({...formData, name: e.target.value})}
               />
             </div>
             <div>
@@ -97,17 +125,17 @@ export const Inventory: React.FC = () => {
               <input 
                 type="number" 
                 required 
-                value={newProduct.price} 
-                onChange={e => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                value={formData.price} 
+                onChange={e => setFormData({...formData, price: Number(e.target.value)})}
               />
             </div>
             <div>
-              <label>Cantidad Inicial</label>
+              <label>Cantidad Initial / Stock</label>
               <input 
                 type="number" 
                 required 
-                value={newProduct.stock} 
-                onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})}
+                value={formData.stock} 
+                onChange={e => setFormData({...formData, stock: Number(e.target.value)})}
               />
             </div>
           </div>
@@ -115,10 +143,10 @@ export const Inventory: React.FC = () => {
           <div style={{ marginTop: '1rem' }}>
             <label>Foto del Producto</label>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.5rem' }}>
-              {newProduct.imageUrl ? (
+              {formData.imageUrl ? (
                 <div style={{ position: 'relative' }}>
-                  <img src={newProduct.imageUrl} alt="preview" style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
-                  <button type="button" onClick={() => setNewProduct({...newProduct, imageUrl: ''})} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', cursor: 'pointer' }}><X size={14} /></button>
+                  <img src={formData.imageUrl} alt="preview" style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
+                  <button type="button" onClick={() => setFormData({...formData, imageUrl: ''})} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', cursor: 'pointer' }}><X size={14} /></button>
                 </div>
               ) : (
                 <button type="button" className="btn btn-ghost" onClick={startCamera}>
@@ -140,7 +168,9 @@ export const Inventory: React.FC = () => {
           )}
 
           <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
-            <button type="submit" className="btn btn-primary">Guardar Producto</button>
+            <button type="submit" className="btn btn-primary">
+              {editingId ? 'Actualizar' : 'Guardar Producto'}
+            </button>
             <button type="button" className="btn btn-ghost" onClick={() => setShowAdd(false)}>Cancelar</button>
           </div>
         </form>
@@ -165,13 +195,23 @@ export const Inventory: React.FC = () => {
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h4 style={{ margin: 0 }}>{p.name}</h4>
-                <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#10b981' }}>{p.stock} uds</span>
+                <span className={`badge ${p.stock < 5 ? 'danger' : 'success'}`} style={{ 
+                  backgroundColor: p.stock < 5 ? '#fee2e2' : '#dcfce7',
+                  color: p.stock < 5 ? '#ef4444' : '#10b981'
+                }}>
+                  {p.stock} uds
+                </span>
               </div>
               <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>${p.price.toLocaleString()}</p>
               {isAdmin && (
-                <button className="btn btn-ghost" style={{ width: '100%', marginTop: '0.5rem', padding: '0.25rem' }}>
-                  <Edit2 size={16} /> Editar
-                </button>
+                <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.5rem' }}>
+                  <button className="btn btn-ghost" style={{ flex: 1, padding: '0.25rem' }} onClick={() => handleEdit(p)}>
+                    <Edit2 size={16} /> Editar
+                  </button>
+                  <button className="btn btn-ghost" style={{ color: 'var(--danger)', padding: '0.25rem' }} onClick={() => handleDelete(p.id, p.name)}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               )}
             </div>
           ))}
