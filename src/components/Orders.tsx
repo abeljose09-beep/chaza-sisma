@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
-import { CheckCircle, Clock, Receipt, Hash, History } from 'lucide-react';
+import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -14,21 +14,20 @@ export const Orders: React.FC = () => {
 
   useEffect(() => {
     let q;
+    // Quitamos 'orderBy' de la consulta de Firebase para evitar errores de índices
     if (user?.role === 'client') {
       q = query(
         collection(db, 'orders'), 
-        where('clientId', '==', user.uid),
-        orderBy('createdAt', 'desc')
+        where('clientId', '==', user.uid)
       );
     } else {
-      q = query(
-        collection(db, 'orders'),
-        orderBy('createdAt', 'desc')
-      );
+      q = query(collection(db, 'orders'));
     }
 
     const unsub = onSnapshot(q, (snapshot) => {
+      // Ordenamos manualmente en JS para mayor compatibilidad
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Order[];
+      items.sort((a, b) => b.createdAt - a.createdAt);
       setOrders(items);
     }, (error) => {
         console.error("Orders sync error:", error);
@@ -44,6 +43,7 @@ export const Orders: React.FC = () => {
 
   const isAtLeastAdmin = user?.role === 'admin' || user?.role === 'superuser';
 
+  // Filtramos según la vista seleccionada
   const filteredOrders = orders.filter(o => view === 'all' || o.status === 'pending');
 
   const clientTubs = filteredOrders.reduce((acc, order) => {
@@ -61,7 +61,6 @@ export const Orders: React.FC = () => {
     try {
       const orderIds = pendingOrders.map(o => o.id);
       await markMultipleOrdersAsPaid(orderIds, clientId, total);
-      alert("Cuentas marcadas como pagadas correctamente");
     } catch (error) {
       console.error(error);
       alert("Error al procesar el pago");
@@ -88,7 +87,7 @@ export const Orders: React.FC = () => {
             style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
             onClick={() => setView('all')}
           >
-            <History size={16} /> Historial
+            <HistoryIcon size={16} /> Historial
           </button>
         </div>
       </div>
@@ -103,38 +102,43 @@ export const Orders: React.FC = () => {
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {getClientName(clientId)}
                 </h3>
-                {clientTotalPending > 0 && (
-                  <span className="badge" style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
-                    Deuda: ${clientTotalPending.toLocaleString()}
+                {clientTotalPending > 0 ? (
+                  <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#ef4444' }}>
+                    Debe: ${clientTotalPending.toLocaleString()}
+                  </span>
+                ) : (
+                  <span className="badge" style={{ backgroundColor: '#dcfce7', color: '#10b981' }}>
+                    Al día
                   </span>
                 )}
               </div>
 
-              <div style={{ maxHeight: '350px', overflowY: 'auto', marginBottom: '1rem' }}>
+              <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '1rem', paddingRight: '0.5rem' }}>
                 {clientOrders.map(order => (
                   <div key={order.id} style={{ 
                     fontSize: '0.85rem', 
                     marginBottom: '1rem', 
-                    padding: '0.75rem', 
-                    background: 'var(--background)', 
-                    borderRadius: '8px',
-                    borderLeft: `4px solid ${order.status === 'paid' ? 'var(--secondary)' : 'var(--danger)'}`
+                    padding: '0.85rem', 
+                    background: order.status === 'paid' ? 'rgba(16, 185, 129, 0.05)' : 'var(--background)', 
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)',
+                    borderLeft: `5px solid ${order.status === 'paid' ? '#10b981' : '#ef4444'}`
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Hash size={14} /> {order.orderNum || '--'}
-                        <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>
-                          ({order.status === 'paid' ? 'PAGADO' : 'PENDIENTE'})
+                        <span style={{ fontSize: '0.7rem', color: order.status === 'paid' ? '#10b981' : '#ef4444' }}>
+                          {order.status === 'paid' ? 'PAGADO' : 'PENDIENTE'}
                         </span>
                       </span>
-                      <span>${order.total.toLocaleString()}</span>
+                      <span style={{ fontSize: '1rem' }}>${order.total.toLocaleString()}</span>
                     </div>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.8rem' }}>
                       {new Date(order.createdAt).toLocaleString()}
                     </p>
                     <ul style={{ listStyle: 'none', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
                       {order.items.map((item, idx) => (
-                        <li key={idx} style={{ fontSize: '0.8rem' }}>{item.quantity}x {item.name}</li>
+                        <li key={idx} style={{ marginBottom: '2px' }}>{item.quantity}x {item.name}</li>
                       ))}
                     </ul>
                   </div>
@@ -158,7 +162,7 @@ export const Orders: React.FC = () => {
         {filteredOrders.length === 0 && (
           <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
             <Receipt size={60} style={{ margin: '0 auto 1.5rem', opacity: 0.2 }} />
-            <p>No se encontraron registros en esta vista.</p>
+            <p>No se encontraron registros de ventas.</p>
           </div>
         )}
       </div>
