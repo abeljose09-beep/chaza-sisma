@@ -123,7 +123,16 @@ input:focus {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
-/* Custom styles for the logo text */
+/* Smart Logo Filter: Inverts white text to black while keeping brand colors in light mode */
+.logo-img {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8);
+  transition: filter 0.3s ease;
+}
+
+[data-theme='dark'] .logo-img {
+  filter: none;
+}
+
 .logo-title {
   color: var(--logo-text);
   transition: color 0.3s ease;

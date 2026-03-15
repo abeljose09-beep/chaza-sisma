@@ -36,7 +36,7 @@ export const App: React.FC = () => {
           </button>
         </div>
         <div style={{ textAlign: 'center', marginTop: '3rem', marginBottom: '1rem' }}>
-          <img src="/logo.png" alt="Logo" style={{ height: '70px', marginBottom: '0.5rem' }} />
+          <img src="/logo.png" alt="Logo" className="logo-img" style={{ height: '70px', marginBottom: '0.5rem' }} />
           <h1 className="logo-title" style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Chaza Sisma</h1>
         </div>
         <Login />
@@ -57,7 +57,7 @@ export const App: React.FC = () => {
 
       <nav className="nav animate-fade-in">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <img src="/logo.png" alt="Logo" style={{ height: '36px' }} />
+          <img src="/logo.png" alt="Logo" className="logo-img" style={{ height: '36px' }} />
           <h1 className="logo-title" style={{ fontSize: '1.5rem', fontWeight: '900', margin: 0 }}>Chaza Sisma</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
