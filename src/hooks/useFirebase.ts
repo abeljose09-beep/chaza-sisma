@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { db, auth } from '../firebase/config';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, setDoc, deleteDoc, runTransaction, where, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, setDoc, deleteDoc, runTransaction, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useStore } from '../store/useStore';
 import type { Product, Client, UserProfile } from '../types';

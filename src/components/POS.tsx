@@ -6,7 +6,7 @@ import { Search, Plus, Minus, ShoppingBag, ShoppingCart } from 'lucide-react';
 
 export const POS: React.FC = () => {
   const { products, clients, activeCart, addToCart, removeFromCart, clearCart, selectedClientId, setSelectedClient, user } = useStore();
-  const { updateProduct, addOrder } = useFirebase();
+  const { addOrder } = useFirebase();
   const [searchTerm, setSearchTerm] = useState('');
 
   const isClient = user?.role === 'client';
@@ -24,21 +24,13 @@ export const POS: React.FC = () => {
     if (activeCart.length === 0) return;
 
     try {
-      // Create the order/purchase
+      // Create the order/purchase (Transaction now handles stock and debt)
       await addOrder({
         clientId: selectedClientId,
         items: activeCart,
         total: cartTotal,
-        status: 'pending',
-        createdAt: Date.now()
+        status: 'pending'
       });
-
-      // Update inventory for each item
-      for (const item of activeCart) {
-        await updateProduct(item.id, {
-          stock: item.stock - item.quantity
-        });
-      }
 
       clearCart();
       alert("Pedido registrado exitosamente");
