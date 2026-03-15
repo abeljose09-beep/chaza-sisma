@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Layout, Users, Package, ShoppingCart, Receipt } from 'lucide-react';
-import { Inventory } from './Inventory';
-import { Clients } from './Clients';
-import { POS } from './POS';
-import { Orders } from './Orders';
-import '../styles/main.css';
+import { Users, Package, ShoppingCart, Receipt } from 'lucide-react';
+import { Inventory } from './components/Inventory';
+import { Clients } from './components/Clients';
+import { POS } from './components/POS';
+import { Orders } from './components/Orders';
+import './styles/main.css';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'clients' | 'orders'>('pos');

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
-import { Search, Plus, Minus, ShoppingBag, User } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingBag, ShoppingCart } from 'lucide-react';
 
 export const POS: React.FC = () => {
   const { products, clients, activeCart, addToCart, removeFromCart, clearCart, selectedClientId, setSelectedClient } = useStore();

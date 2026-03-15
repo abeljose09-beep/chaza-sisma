@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { db } from '../firebase/config';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
-import { Product, Client } from '../types';
+import type { Product, Client } from '../types';
 
 export const useFirebase = () => {
   const { setProducts, setClients } = useStore();

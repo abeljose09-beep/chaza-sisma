@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
-import { Order } from '../types';
+import type { Order } from '../types';
 import { CheckCircle, Clock, Receipt } from 'lucide-react';
 
 export const Orders: React.FC = () => {

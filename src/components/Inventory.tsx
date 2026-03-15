@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { Plus, Edit2, Search } from 'lucide-react';
 
 export const Inventory: React.FC = () => {
   const { products } = useStore();
-  const { addProduct, updateProduct } = useFirebase();
+  const { addProduct } = useFirebase();
   const [showAdd, setShowAdd] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
