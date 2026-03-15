@@ -46,7 +46,9 @@ export const Login: React.FC = () => {
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem' }}>
         <div>
           <p style={{ fontWeight: 'bold' }}>{user.name}</p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}> Rol: {user.role.toUpperCase()}</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}> 
+            Rol: {user.role === 'superuser' ? 'ADMIN' : user.role.toUpperCase()}
+          </p>
         </div>
         <button className="btn btn-ghost" onClick={() => signOut(auth)}>
           <LogOut size={18} /> Salir

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Package, ShoppingCart, Receipt, ShieldAlert, TrendingUp } from 'lucide-react';
+import { Users, Package, ShoppingCart, Receipt, TrendingUp } from 'lucide-react';
 import { Inventory } from './components/Inventory';
 import { Clients } from './components/Clients';
 import { POS } from './components/POS';
@@ -73,12 +73,6 @@ export const App: React.FC = () => {
                 <TrendingUp size={18} /> <span className="hide-mobile">Informes</span>
               </button>
             </>
-          )}
-
-          {user.role === 'superuser' && (
-            <button className="btn btn-ghost" style={{ border: '1px solid var(--danger)', color: 'var(--danger)' }}>
-              <ShieldAlert size={18} /> <span className="hide-mobile">SUPER</span>
-            </button>
           )}
         </div>
       </nav>

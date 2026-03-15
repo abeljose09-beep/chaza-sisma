@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { db, auth } from '../firebase/config';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, getDoc, setDoc, deleteDoc, runTransaction } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, setDoc, deleteDoc, runTransaction, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useStore } from '../store/useStore';
 import type { Product, Client, UserProfile } from '../types';
@@ -9,40 +9,33 @@ export const useFirebase = () => {
   const { setProducts, setClients, setUser } = useStore();
 
   useEffect(() => {
-    // Auth State
+    // Auth State - Persistencia real
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          setUser({ uid: firebaseUser.uid, ...userDoc.data() } as UserProfile);
-        } else {
-          const newProfile: UserProfile = {
-            uid: firebaseUser.uid,
-            name: firebaseUser.displayName || 'Usuario',
-            email: firebaseUser.email || '',
-            role: 'client'
-          };
-          await setDoc(doc(db, 'users', firebaseUser.uid), { ...newProfile, debt: 0 });
-          setUser(newProfile);
-        }
+        // Listen to own profile in real-time
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const unsubProfile = onSnapshot(userRef, (snapshot) => {
+          if (snapshot.exists()) {
+            setUser({ uid: firebaseUser.uid, ...snapshot.data() } as UserProfile);
+          }
+        });
+        return () => unsubProfile();
       } else {
         setUser(null);
       }
     });
 
-    // Sync Products
-    const qProducts = query(collection(db, 'products'));
-    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
+    // Real-time Products
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
       setProducts(items);
     });
 
-    // Sync Clients/Users
-    const qClients = query(collection(db, 'users'));
+    // Real-time Clients (Exclude Superuser from ALL views)
+    const qClients = query(collection(db, 'users'), where('role', '!=', 'superuser'));
     const unsubClients = onSnapshot(qClients, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as any[];
-      // We want to show all clients in the Clients directory
-      setClients(items.filter(i => i.role === 'client' || i.role === 'admin' || i.role === 'superuser') as Client[]);
+      setClients(items as Client[]);
     });
 
     return () => {
@@ -66,14 +59,13 @@ export const useFirebase = () => {
 
   const addOrder = async (orderData: any) => {
     await runTransaction(db, async (transaction) => {
-      // 1. Get next order number
-      const counterDoc = await transaction.get(doc(db, 'metadata', 'orderCounter'));
+      const counterRef = doc(db, 'metadata', 'orderCounter');
+      const counterDoc = await transaction.get(counterRef);
       let nextNum = 1;
       if (counterDoc.exists()) {
         nextNum = counterDoc.data().count + 1;
       }
       
-      // 2. Create the order
       const orderRef = doc(collection(db, 'orders'));
       transaction.set(orderRef, {
         ...orderData,
@@ -81,10 +73,8 @@ export const useFirebase = () => {
         createdAt: Date.now()
       });
 
-      // 3. Update counter
-      transaction.set(doc(db, 'metadata', 'orderCounter'), { count: nextNum }, { merge: true });
+      transaction.set(counterRef, { count: nextNum }, { merge: true });
 
-      // 4. Update product stocks
       for (const item of orderData.items) {
         const prodRef = doc(db, 'products', item.id);
         const prodSnap = await transaction.get(prodRef);
@@ -93,7 +83,6 @@ export const useFirebase = () => {
         }
       }
 
-      // 5. Update client debt
       const clientRef = doc(db, 'users', orderData.clientId);
       const clientSnap = await transaction.get(clientRef);
       if (clientSnap.exists()) {
@@ -106,6 +95,10 @@ export const useFirebase = () => {
   const markOrderAsPaid = async (orderId: string, clientId: string, total: number) => {
     await runTransaction(db, async (transaction) => {
       const orderRef = doc(db, 'orders', orderId);
+      const orderSnap = await transaction.get(orderRef);
+      
+      if (!orderSnap.exists() || orderSnap.data().status === 'paid') return;
+
       transaction.update(orderRef, { status: 'paid' });
 
       const clientRef = doc(db, 'users', clientId);
