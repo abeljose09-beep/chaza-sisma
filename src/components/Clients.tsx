@@ -8,7 +8,7 @@ import type { Order } from '../types';
 
 export const Clients: React.FC = () => {
   const { clients, user } = useStore();
-  const { addClient, deleteOrder } = useFirebase();
+  const { addClient, deleteOrder, resetAllDebts } = useFirebase();
   const [showAdd, setShowAdd] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '' });
   const [historyClientId, setHistoryClientId] = useState<string | null>(null);
@@ -51,22 +51,44 @@ export const Clients: React.FC = () => {
     }
   };
 
-  const isAtLeastAdmin = user?.role === 'admin' || user?.role === 'superuser';
+  const handleResetAllDebts = async () => {
+    if (!confirm('¿Resetear TODOS los saldos de clientes a $0? Esta acción no se puede deshacer.')) return;
+    try {
+      await resetAllDebts();
+      alert('Saldos reseteados a $0 correctamente.');
+    } catch (error) {
+      alert('Error al resetear saldos.');
+      console.error(error);
+    }
+  };
+
+  const isSuperuser = user?.role === 'superuser';
 
   return (
     <div className="clients-section">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h2>Directorio de Clientes</h2>
-        {!historyClientId && (
-          <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
-            <UserPlus size={20} /> Nuevo Cliente
-          </button>
-        )}
-        {historyClientId && (
-          <button className="btn btn-ghost" onClick={() => setHistoryClientId(null)}>
-            Volver al listado
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {isSuperuser && !historyClientId && (
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+              onClick={handleResetAllDebts}
+            >
+              Resetear saldos a $0
+            </button>
+          )}
+          {!historyClientId && (
+            <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
+              <UserPlus size={20} /> Nuevo Cliente
+            </button>
+          )}
+          {historyClientId && (
+            <button className="btn btn-ghost" onClick={() => setHistoryClientId(null)}>
+              Volver al listado
+            </button>
+          )}
+        </div>
       </div>
 
       {!historyClientId && showAdd && (
@@ -123,7 +145,7 @@ export const Clients: React.FC = () => {
                         }}>
                           {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
                         </span>
-                        {isAtLeastAdmin && (
+                        {isSuperuser && (
                           <button
                             onClick={() => handleDeleteOrder(order)}
                             title="Eliminar pedido"

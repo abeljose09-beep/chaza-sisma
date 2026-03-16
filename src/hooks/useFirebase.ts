@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { db, auth } from '../firebase/config';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc, setDoc, deleteDoc, runTransaction, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, setDoc, deleteDoc, runTransaction, where, getDocs, writeBatch } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useStore } from '../store/useStore';
 import type { Product, Client, UserProfile } from '../types';
@@ -166,5 +166,21 @@ export const useFirebase = () => {
     await setDoc(newRef, { ...client, uid: newRef.id, role: 'client', debt: 0 });
   };
 
-  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder };
+  const resetAllDebts = async () => {
+    try {
+      const q = query(collection(db, 'users'), where('role', '==', 'client'));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.docs.forEach(d => {
+        batch.update(doc(db, 'users', d.id), { debt: 0 });
+      });
+      await batch.commit();
+      return true;
+    } catch (e: any) {
+      console.error('DEBUG RESET DEBTS ERROR:', e);
+      throw new Error(e.message || 'Error al resetear saldos');
+    }
+  };
+
+  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts };
 };
