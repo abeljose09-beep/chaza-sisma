@@ -9,6 +9,8 @@ import type { Order } from '../types';
 export const Reports: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [timeframe, setTimeframe] = useState<'today' | 'week'>('today');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const { user } = useStore();
   const { resetAllDebts, deleteAllOrders } = useFirebase();
 
@@ -53,20 +55,19 @@ export const Reports: React.FC = () => {
   const isSuperuser = user?.role === 'superuser';
 
   const handleResetAllDebts = async () => {
-    if (!confirm('¿Resetear TODOS los saldos de clientes a $0? Esta acción no se puede deshacer.')) return;
     try {
       await resetAllDebts();
+      setConfirmReset(false);
       alert('Saldos reseteados a $0 correctamente.');
     } catch (error) {
       alert('Error al resetear saldos.');
       console.error(error);
     }
   };
-
   const handleDeleteAllOrders = async () => {
-    if (!confirm('¿Borrar TODOS los pedidos e historial y resetear los saldos a $0? Esta acción NO se puede deshacer y dejará las ventas en $0.')) return;
     try {
       await deleteAllOrders();
+      setConfirmDelete(false);
       alert('Todos los pedidos fueron eliminados exitosamente.');
     } catch (error) {
       alert('Error al borrar los pedidos.');
@@ -80,22 +81,39 @@ export const Reports: React.FC = () => {
         <h2>Reportes de Ventas</h2>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {isSuperuser && (
-            <>
-              <button
-                className="btn btn-ghost"
-                style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
-                onClick={handleDeleteAllOrders}
-              >
-                Borrar historial de ventas
-              </button>
-              <button
-                className="btn btn-ghost"
-                style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
-                onClick={handleResetAllDebts}
-              >
-                Resetear saldos a $0
-              </button>
-            </>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {confirmDelete ? (
+                <div style={{ display: 'flex', gap: '0.25rem', background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '4px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>¿Confirmar borrar todo?</span>
+                  <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#ef4444', border: 'none' }} onClick={handleDeleteAllOrders}>Sí</button>
+                  <button className="btn btn-ghost" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setConfirmDelete(false)}>No</button>
+                </div>
+              ) : (
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Borrar historial de ventas
+                </button>
+              )}
+
+              {confirmReset ? (
+                <div style={{ display: 'flex', gap: '0.25rem', background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '4px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>¿Confirmar reset $0?</span>
+                  <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#ef4444', border: 'none' }} onClick={handleResetAllDebts}>Sí</button>
+                  <button className="btn btn-ghost" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setConfirmReset(false)}>No</button>
+                </div>
+              ) : (
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+                  onClick={() => setConfirmReset(true)}
+                >
+                  Resetear saldos a $0
+                </button>
+              )}
+            </div>
           )}
           <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', background: 'var(--border)', padding: '0.25rem', borderRadius: '12px' }}>
             <button 

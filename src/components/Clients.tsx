@@ -10,8 +10,10 @@ export const Clients: React.FC = () => {
   const { clients, user } = useStore();
   const { addClient, deleteOrder, resetAllDebts } = useFirebase();
   const [showAdd, setShowAdd] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '' });
   const [historyClientId, setHistoryClientId] = useState<string | null>(null);
+  const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null);
   const [clientHistory, setClientHistory] = useState<Order[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -41,10 +43,10 @@ export const Clients: React.FC = () => {
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (!confirm(`¿Eliminar el pedido #${order.orderNum || 'S/N'} por $${order.total.toLocaleString()}? Esta acción no se puede deshacer.`)) return;
     try {
       await deleteOrder(order.id, order.clientId, order.total, order.status);
       setClientHistory(prev => prev.filter(o => o.id !== order.id));
+      setConfirmDeleteOrderId(null);
     } catch (error) {
       alert('Error al eliminar el pedido. Inténtalo de nuevo.');
       console.error(error);
@@ -52,9 +54,9 @@ export const Clients: React.FC = () => {
   };
 
   const handleResetAllDebts = async () => {
-    if (!confirm('¿Resetear TODOS los saldos de clientes a $0? Esta acción no se puede deshacer.')) return;
     try {
       await resetAllDebts();
+      setConfirmReset(false);
       alert('Saldos reseteados a $0 correctamente.');
     } catch (error) {
       alert('Error al resetear saldos.');
@@ -70,13 +72,21 @@ export const Clients: React.FC = () => {
         <h2>Directorio de Clientes</h2>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {isSuperuser && !historyClientId && (
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
-              onClick={handleResetAllDebts}
-            >
-              Resetear saldos a $0
-            </button>
+            confirmReset ? (
+              <div style={{ display: 'flex', gap: '0.25rem', background: '#fee2e2', padding: '0.2rem 0.5rem', borderRadius: '4px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>¿Confirmar reset $0?</span>
+                <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: '#ef4444', border: 'none' }} onClick={handleResetAllDebts}>Sí</button>
+                <button className="btn btn-ghost" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setConfirmReset(false)}>No</button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+                onClick={() => setConfirmReset(true)}
+              >
+                Resetear saldos a $0
+              </button>
+            )
           )}
           {!historyClientId && (
             <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
@@ -146,17 +156,25 @@ export const Clients: React.FC = () => {
                           {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
                         </span>
                         {isSuperuser && (
-                          <button
-                            onClick={() => handleDeleteOrder(order)}
-                            title="Eliminar pedido"
-                            style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#ef4444', padding: '0.2rem', display: 'flex',
-                              alignItems: 'center', borderRadius: '4px'
-                            }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          confirmDeleteOrderId === order.id ? (
+                            <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>¿Borrar?</span>
+                              <button style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '0.1rem 0.3rem', cursor: 'pointer' }} onClick={() => handleDeleteOrder(order)}>Sí</button>
+                              <button style={{ background: '#ccc', color: 'black', border: 'none', borderRadius: '4px', padding: '0.1rem 0.3rem', cursor: 'pointer' }} onClick={() => setConfirmDeleteOrderId(null)}>No</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteOrderId(order.id)}
+                              title="Eliminar pedido"
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#ef4444', padding: '0.2rem', display: 'flex',
+                                alignItems: 'center', borderRadius: '4px'
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )
                         )}
                       </div>
                     </div>
