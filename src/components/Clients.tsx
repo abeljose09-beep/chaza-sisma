@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
-import { UserPlus, Phone, Mail, History } from 'lucide-react';
+import { UserPlus, Phone, Mail, History, Trash2 } from 'lucide-react';
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import type { Order } from '../types';
 
 export const Clients: React.FC = () => {
-  const { clients } = useStore();
-  const { addClient } = useFirebase();
+  const { clients, user } = useStore();
+  const { addClient, deleteOrder } = useFirebase();
   const [showAdd, setShowAdd] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '' });
   const [historyClientId, setHistoryClientId] = useState<string | null>(null);
@@ -39,6 +39,19 @@ export const Clients: React.FC = () => {
     }
     setLoadingHistory(false);
   };
+
+  const handleDeleteOrder = async (order: Order) => {
+    if (!confirm(`¿Eliminar el pedido #${order.orderNum || 'S/N'} por $${order.total.toLocaleString()}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await deleteOrder(order.id, order.clientId, order.total, order.status);
+      setClientHistory(prev => prev.filter(o => o.id !== order.id));
+    } catch (error) {
+      alert('Error al eliminar el pedido. Inténtalo de nuevo.');
+      console.error(error);
+    }
+  };
+
+  const isAtLeastAdmin = user?.role === 'admin' || user?.role === 'superuser';
 
   return (
     <div className="clients-section">
@@ -103,19 +116,34 @@ export const Clients: React.FC = () => {
                   <div key={order.id} style={{ padding: '1rem', background: 'var(--background)', borderRadius: '12px', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                       <span style={{ fontWeight: 'bold' }}>Pedido #{order.orderNum || 'S/N'}</span>
-                      <span className={`badge ${order.status === 'paid' ? 'success' : 'danger'}`} style={{
-                        backgroundColor: order.status === 'paid' ? '#dcfce7' : '#fee2e2',
-                        color: order.status === 'paid' ? '#10b981' : '#ef4444'
-                      }}>
-                        {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span className={`badge ${order.status === 'paid' ? 'success' : 'danger'}`} style={{
+                          backgroundColor: order.status === 'paid' ? '#dcfce7' : '#fee2e2',
+                          color: order.status === 'paid' ? '#10b981' : '#ef4444'
+                        }}>
+                          {order.status === 'paid' ? 'Pagado' : 'Pendiente'}
+                        </span>
+                        {isAtLeastAdmin && (
+                          <button
+                            onClick={() => handleDeleteOrder(order)}
+                            title="Eliminar pedido"
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: '#ef4444', padding: '0.2rem', display: 'flex',
+                              alignItems: 'center', borderRadius: '4px'
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       <span>{new Date(order.createdAt).toLocaleString()}</span>
                       <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>${order.total.toLocaleString()}</span>
                     </div>
                     <ul style={{ listStyle: 'none', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)', fontSize: '0.85rem' }}>
-                      {order.items.map((item, idx) => (
+                      {(order.items || []).map((item, idx) => (
                         <li key={idx}>{item.quantity}x {item.name}</li>
                       ))}
                     </ul>

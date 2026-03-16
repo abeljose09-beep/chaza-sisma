@@ -107,6 +107,28 @@ export const useFirebase = () => {
     }
   };
 
+  const deleteOrder = async (orderId: string, clientId: string, total: number, status: string) => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const orderRef = doc(db, 'orders', orderId);
+        const clientRef = doc(db, 'users', clientId);
+        const clientSnap = await transaction.get(clientRef);
+
+        transaction.delete(orderRef);
+
+        // Solo descontar deuda si el pedido estaba pendiente
+        if (status === 'pending' && clientSnap.exists()) {
+          const currentDebt = clientSnap.data().debt || 0;
+          transaction.update(clientRef, { debt: Math.max(0, currentDebt - total) });
+        }
+      });
+      return true;
+    } catch (e: any) {
+      console.error("DEBUG DELETE ORDER ERROR:", e);
+      throw new Error(e.message || "Error al eliminar pedido");
+    }
+  };
+
   const markMultipleOrdersAsPaid = async (orderIds: string[], clientId: string, totalAmount: number) => {
     try {
       await runTransaction(db, async (transaction) => {
@@ -144,5 +166,5 @@ export const useFirebase = () => {
     await setDoc(newRef, { ...client, uid: newRef.id, role: 'client', debt: 0 });
   };
 
-  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid };
+  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder };
 };
