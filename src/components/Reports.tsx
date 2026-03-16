@@ -10,7 +10,7 @@ export const Reports: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [timeframe, setTimeframe] = useState<'today' | 'week'>('today');
   const { user } = useStore();
-  const { resetAllDebts } = useFirebase();
+  const { resetAllDebts, deleteAllOrders } = useFirebase();
 
   useEffect(() => {
     const q = query(collection(db, 'orders'));
@@ -63,19 +63,39 @@ export const Reports: React.FC = () => {
     }
   };
 
+  const handleDeleteAllOrders = async () => {
+    if (!confirm('¿Borrar TODOS los pedidos e historial y resetear los saldos a $0? Esta acción NO se puede deshacer y dejará las ventas en $0.')) return;
+    try {
+      await deleteAllOrders();
+      alert('Todos los pedidos fueron eliminados exitosamente.');
+    } catch (error) {
+      alert('Error al borrar los pedidos.');
+      console.error(error);
+    }
+  };
+
   return (
     <div className="reports-section animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h2>Reportes de Ventas</h2>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {isSuperuser && (
-            <button
-              className="btn btn-ghost"
-              style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
-              onClick={handleResetAllDebts}
-            >
-              Resetear saldos a $0
-            </button>
+            <>
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+                onClick={handleDeleteAllOrders}
+              >
+                Borrar historial de ventas
+              </button>
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+                onClick={handleResetAllDebts}
+              >
+                Resetear saldos a $0
+              </button>
+            </>
           )}
           <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', background: 'var(--border)', padding: '0.25rem', borderRadius: '12px' }}>
             <button 

@@ -182,5 +182,40 @@ export const useFirebase = () => {
     }
   };
 
-  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts };
+  const deleteAllOrders = async () => {
+    try {
+      // 1. Borrar todos los pedidos en batches
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const orderDocs = ordersSnap.docs;
+      const BATCH_SIZE = 400;
+      for (let i = 0; i < orderDocs.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        orderDocs.slice(i, i + BATCH_SIZE).forEach(d => {
+          batch.delete(doc(db, 'orders', d.id));
+        });
+        await batch.commit();
+      }
+
+      // 2. Resetear todas las deudas a 0
+      const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'client')));
+      if (usersSnap.docs.length > 0) {
+        const batch = writeBatch(db);
+        usersSnap.docs.forEach(d => {
+          batch.update(doc(db, 'users', d.id), { debt: 0 });
+        });
+        await batch.commit();
+      }
+
+      // 3. Resetear contador de pedidos
+      const counterRef = doc(db, 'metadata', 'orderCounter');
+      await setDoc(counterRef, { count: 0 }, { merge: true });
+
+      return true;
+    } catch (e: any) {
+      console.error('DEBUG DELETE ALL ORDERS ERROR:', e);
+      throw new Error(e.message || 'Error al borrar pedidos');
+    }
+  };
+
+  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts, deleteAllOrders };
 };
