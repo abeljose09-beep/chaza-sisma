@@ -29,7 +29,7 @@ export interface Order {
   id: string;
   orderNum: number;
   clientId: string;
-  items: CartItem[];
+  items?: CartItem[];
   total: number;
   status: 'pending' | 'paid';
   createdAt: number;

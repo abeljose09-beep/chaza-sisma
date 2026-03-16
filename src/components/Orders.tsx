@@ -227,8 +227,8 @@ export const Orders: React.FC = () => {
                         {new Date(order.createdAt).toLocaleString()}
                       </p>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                        {order.items.map((item, i) => (
-                          <span key={i}>{item.quantity}x {item.name}{i < order.items.length - 1 ? ' · ' : ''}</span>
+                        {(order.items || []).map((item, i) => (
+                          <span key={i}>{item.quantity}x {item.name}{i < (order.items || []).length - 1 ? ' · ' : ''}</span>
                         ))}
                       </div>
                     </div>

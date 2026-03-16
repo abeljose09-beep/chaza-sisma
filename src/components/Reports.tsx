@@ -37,7 +37,7 @@ export const Reports: React.FC = () => {
   // Calculate most sold products
   const productSales: Record<string, number> = {};
   filteredOrders.forEach(order => {
-    order.items.forEach(item => {
+    (order.items || []).forEach(item => {
       productSales[item.name] = (productSales[item.name] || 0) + item.quantity;
     });
   });
