@@ -35,13 +35,9 @@ export const App: React.FC = () => {
             {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
           </button>
         </div>
-        <div style={{ textAlign: 'center', marginTop: '4rem', marginBottom: '2rem' }}>
-          <img 
-            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'} 
-            alt="Chaza Logo" 
-            className="logo-img" 
-            style={{ height: '120px', maxWidth: '90%', objectFit: 'contain', filter: 'drop-shadow(0 8px 24px rgba(0,45,75,0.15))' }} 
-          />
+        <div style={{ textAlign: 'center', marginTop: '5rem', marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: '900', color: 'var(--primary)', margin: 0, letterSpacing: '-1px' }}>Sisma Chaza</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '0.5rem' }}>Mini Tienda de Pedidos</p>
         </div>
         <Login />
       </div>
@@ -60,13 +56,8 @@ export const App: React.FC = () => {
       </header>
 
       <nav className="nav animate-fade-in" style={{ backgroundColor: 'var(--surface)', padding: '1.5rem', borderRadius: '24px', marginBottom: '2rem', border: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img 
-            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'} 
-            alt="Logo" 
-            className="logo-img" 
-            style={{ height: '48px', objectFit: 'contain' }} 
-          />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--primary)', margin: 0 }}>Sisma Chaza</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button 
