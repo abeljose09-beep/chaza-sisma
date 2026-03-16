@@ -291,11 +291,11 @@ input:focus {
     padding: 1.5rem;
     padding-bottom: 3rem;
   }
-  
   .top-bar {
-    border-bottom: none;
-    background: transparent;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     padding: 1rem 1.5rem;
+    box-shadow: var(--shadow);
   }
   
   .card { padding: 1.5rem; }
