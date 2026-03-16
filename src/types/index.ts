@@ -31,6 +31,7 @@ export interface Order {
   clientId: string;
   items?: CartItem[];
   total: number;
+  paidAmount?: number;
   status: 'pending' | 'paid';
   createdAt: number;
 }

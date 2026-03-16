@@ -36,8 +36,8 @@ export const Reports: React.FC = () => {
   const stats = {
     totalRevenue: filteredOrders.reduce((sum, o) => sum + o.total, 0),
     totalOrders: filteredOrders.length,
-    pendingCollection: filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + o.total, 0),
-    paidRevenue: filteredOrders.filter(o => o.status === 'paid').reduce((sum, o) => sum + o.total, 0)
+    pendingCollection: filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.total - (o.paidAmount || 0)), 0),
+    paidRevenue: filteredOrders.filter(o => o.status === 'paid').reduce((sum, o) => sum + o.total, 0) + filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.paidAmount || 0), 0)
   };
 
   // Calculate most sold products

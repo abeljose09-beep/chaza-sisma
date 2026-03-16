@@ -4,14 +4,16 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
-import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon, Check } from 'lucide-react';
+import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon, Check, DollarSign } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [view, setView] = useState<'pending' | 'all'>('pending');
   const [selectedOrders, setSelectedOrders] = useState<Record<string, Set<string>>>({});
+  const [partialPayOrderId, setPartialPayOrderId] = useState<string | null>(null);
+  const [partialAmount, setPartialAmount] = useState<string>('');
   const { clients, user } = useStore();
-  const { markMultipleOrdersAsPaid } = useFirebase();
+  const { markMultipleOrdersAsPaid, payPartialOrder } = useFirebase();
 
   useEffect(() => {
     let q;
@@ -78,7 +80,7 @@ export const Orders: React.FC = () => {
   const getSelectedTotal = (clientId: string, clientOrders: Order[]) => {
     const sel = selectedOrders[clientId];
     if (!sel || sel.size === 0) return 0;
-    return clientOrders.filter(o => sel.has(o.id) && o.status === 'pending').reduce((sum, o) => sum + o.total, 0);
+    return clientOrders.filter(o => sel.has(o.id) && o.status === 'pending').reduce((sum, o) => sum + (o.total - (o.paidAmount || 0)), 0);
   };
 
   const handlePaySelected = async (clientId: string, clientOrders: Order[]) => {
@@ -88,7 +90,7 @@ export const Orders: React.FC = () => {
     const toPay = clientOrders.filter(o => sel.has(o.id) && o.status === 'pending');
     if (toPay.length === 0) return;
 
-    const total = toPay.reduce((sum, o) => sum + o.total, 0);
+    const total = toPay.reduce((sum, o) => sum + (o.total - (o.paidAmount || 0)), 0);
     const msg = toPay.length === 1
       ? `¿Marcar el pedido #${toPay[0].orderNum || '--'} ($${total.toLocaleString()}) como pagado?`
       : `¿Marcar ${toPay.length} pedidos de ${getClientName(clientId)} ($${total.toLocaleString()}) como pagados?`;
@@ -96,11 +98,34 @@ export const Orders: React.FC = () => {
     if (!confirm(msg)) return;
 
     try {
-      await markMultipleOrdersAsPaid(toPay.map(o => o.id), clientId, total);
+      await markMultipleOrdersAsPaid(toPay.map(o => o.id), clientId);
       setSelectedOrders(prev => ({ ...prev, [clientId]: new Set() }));
     } catch (error) {
       console.error(error);
       alert("Error al procesar el pago");
+    }
+  };
+
+  const handlePartialPay = async (e: React.MouseEvent, order: Order) => {
+    e.stopPropagation();
+    const amount = Number(partialAmount);
+    const remaining = order.total - (order.paidAmount || 0);
+
+    if (isNaN(amount) || amount <= 0) {
+      return alert("Ingresa un monto válido mayor a 0.");
+    }
+    if (amount > remaining) {
+      return alert(`El abono no puede superar la deuda actual de $${remaining.toLocaleString()}`);
+    }
+
+    try {
+      await payPartialOrder(order.id, order.clientId, amount);
+      setPartialPayOrderId(null);
+      setPartialAmount('');
+      alert("Abono guardado correctamente.");
+    } catch (error) {
+      console.error(error);
+      alert("Error al guardar el abono.");
     }
   };
 
@@ -131,7 +156,7 @@ export const Orders: React.FC = () => {
       <div className="grid">
         {Object.entries(clientGroups).map(([clientId, clientOrders]) => {
           const pendingOrders = clientOrders.filter(o => o.status === 'pending');
-          const totalPending = pendingOrders.reduce((sum, o) => sum + o.total, 0);
+          const totalPending = pendingOrders.reduce((sum, o) => sum + (o.total - (o.paidAmount || 0)), 0);
           const sel = selectedOrders[clientId] || new Set();
           const selectedTotal = getSelectedTotal(clientId, clientOrders);
           const allSelected = pendingOrders.length > 0 && pendingOrders.every(o => sel.has(o.id));
@@ -221,16 +246,53 @@ export const Orders: React.FC = () => {
                             {isPending ? 'PEND' : 'PAGADO'}
                           </span>
                         </div>
-                        <span style={{ fontWeight: '800', fontSize: '0.85rem' }}>${order.total.toLocaleString()}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontWeight: '800', fontSize: '0.85rem' }}>${(order.total - (order.paidAmount || 0)).toLocaleString()}</span>
+                          {order.paidAmount ? (
+                            <div style={{ fontSize: '0.65rem', color: '#10b981' }}>De ${order.total.toLocaleString()} (Abonado: ${order.paidAmount.toLocaleString()})</div>
+                          ) : null}
+                        </div>
                       </div>
                       <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                         {new Date(order.createdAt).toLocaleString()}
                       </p>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                         {(order.items || []).map((item, i) => (
-                          <span key={i}>{item.quantity}x {item.name}{i < (order.items || []).length - 1 ? ' · ' : ''}</span>
+                           <span key={i}>{item.quantity}x {item.name}{i < (order.items || []).length - 1 ? ' · ' : ''}</span>
                         ))}
                       </div>
+                      
+                      {isAtLeastAdmin && isPending && !isSelected && (
+                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+                          {partialPayOrderId === order.id ? (
+                            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>$</span>
+                              <input 
+                                type="number" 
+                                value={partialAmount} 
+                                onChange={e => setPartialAmount(e.target.value)}
+                                style={{ width: '80px', padding: '0.2rem', fontSize: '0.75rem', height: 'calc(1.5rem + 2px)' }}
+                                placeholder="Monto"
+                                autoFocus
+                              />
+                              <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'calc(1.5rem + 2px)' }} onClick={(e) => handlePartialPay(e, order)}>Ok</button>
+                              <button className="btn btn-ghost" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', height: 'calc(1.5rem + 2px)' }} onClick={(e) => { e.stopPropagation(); setPartialPayOrderId(null); }}>X</button>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setPartialPayOrderId(order.id); setPartialAmount(''); }}
+                              style={{ 
+                                background: 'white', border: '1px solid var(--primary)', 
+                                color: 'var(--primary)', padding: '0.2rem 0.6rem', 
+                                borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              <DollarSign size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }}/> Abonar
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

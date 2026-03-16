@@ -44,7 +44,7 @@ export const Clients: React.FC = () => {
 
   const handleDeleteOrder = async (order: Order) => {
     try {
-      await deleteOrder(order.id, order.clientId, order.total, order.status);
+      await deleteOrder(order.id, order.clientId);
       setClientHistory(prev => prev.filter(o => o.id !== order.id));
       setConfirmDeleteOrderId(null);
     } catch (error) {
@@ -180,7 +180,12 @@ export const Clients: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       <span>{new Date(order.createdAt).toLocaleString()}</span>
-                      <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>${order.total.toLocaleString()}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>${order.total.toLocaleString()}</span>
+                        {order.paidAmount ? (
+                          <div style={{ fontSize: '0.7rem', color: '#10b981' }}>Abonado: ${order.paidAmount.toLocaleString()}</div>
+                        ) : null}
+                      </div>
                     </div>
                     <ul style={{ listStyle: 'none', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)', fontSize: '0.85rem' }}>
                       {(order.items || []).map((item, idx) => (

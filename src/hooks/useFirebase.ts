@@ -107,19 +107,25 @@ export const useFirebase = () => {
     }
   };
 
-  const deleteOrder = async (orderId: string, clientId: string, total: number, status: string) => {
+  const deleteOrder = async (orderId: string, clientId: string) => {
     try {
       await runTransaction(db, async (transaction) => {
         const orderRef = doc(db, 'orders', orderId);
         const clientRef = doc(db, 'users', clientId);
+        
+        const orderSnap = await transaction.get(orderRef);
         const clientSnap = await transaction.get(clientRef);
 
-        transaction.delete(orderRef);
+        if (orderSnap.exists()) {
+          const orderData = orderSnap.data();
+          const pendingDebt = orderData.status === 'pending' ? (orderData.total - (orderData.paidAmount || 0)) : 0;
+          
+          transaction.delete(orderRef);
 
-        // Solo descontar deuda si el pedido estaba pendiente
-        if (status === 'pending' && clientSnap.exists()) {
-          const currentDebt = clientSnap.data().debt || 0;
-          transaction.update(clientRef, { debt: Math.max(0, currentDebt - total) });
+          if (pendingDebt > 0 && clientSnap.exists()) {
+            const currentDebt = clientSnap.data().debt || 0;
+            transaction.update(clientRef, { debt: Math.max(0, currentDebt - pendingDebt) });
+          }
         }
       });
       return true;
@@ -129,7 +135,7 @@ export const useFirebase = () => {
     }
   };
 
-  const markMultipleOrdersAsPaid = async (orderIds: string[], clientId: string, totalAmount: number) => {
+  const markMultipleOrdersAsPaid = async (orderIds: string[], clientId: string) => {
     try {
       await runTransaction(db, async (transaction) => {
         // READS
@@ -143,21 +149,63 @@ export const useFirebase = () => {
         }
 
         // WRITES
+        let totalToDiscount = 0;
         for (const { ref, snap } of orderSnaps) {
           if (snap.exists() && snap.data().status !== 'paid') {
-            transaction.update(ref, { status: 'paid' });
+            const data = snap.data();
+            const remaining = data.total - (data.paidAmount || 0);
+            totalToDiscount += remaining;
+            transaction.update(ref, { status: 'paid', paidAmount: data.total });
           }
         }
 
         if (clientSnap.exists()) {
           const currentDebt = clientSnap.data().debt || 0;
-          transaction.update(clientRef, { debt: Math.max(0, currentDebt - totalAmount) });
+          transaction.update(clientRef, { debt: Math.max(0, currentDebt - totalToDiscount) });
         }
       });
       return true;
     } catch (e: any) {
       console.error("DEBUG PAYMENT ERROR:", e);
       throw new Error(e.message || "Error en transacción de pago");
+    }
+  };
+
+  const payPartialOrder = async (orderId: string, clientId: string, amount: number) => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const orderRef = doc(db, 'orders', orderId);
+        const clientRef = doc(db, 'users', clientId);
+        
+        const orderSnap = await transaction.get(orderRef);
+        const clientSnap = await transaction.get(clientRef);
+
+        if (!orderSnap.exists()) throw new Error("Pedido no encontrado");
+        const orderData = orderSnap.data();
+        
+        if (orderData.status === 'paid') throw new Error("Pedido ya está pagado");
+
+        const currentPaid = orderData.paidAmount || 0;
+        const remaining = orderData.total - currentPaid;
+        
+        if (amount > remaining) throw new Error("El abono no puede superar la deuda actual de este pedido");
+
+        const newPaidAmount = currentPaid + amount;
+        if (newPaidAmount >= orderData.total) {
+          transaction.update(orderRef, { status: 'paid', paidAmount: orderData.total });
+        } else {
+          transaction.update(orderRef, { paidAmount: newPaidAmount });
+        }
+
+        if (clientSnap.exists()) {
+          const currentDebt = clientSnap.data().debt || 0;
+          transaction.update(clientRef, { debt: Math.max(0, currentDebt - amount) });
+        }
+      });
+      return true;
+    } catch (e: any) {
+      console.error("DEBUG ABONO ERROR:", e);
+      throw new Error(e.message || "Error al realizar abono");
     }
   };
 
@@ -217,5 +265,5 @@ export const useFirebase = () => {
     }
   };
 
-  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts, deleteAllOrders };
+  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts, deleteAllOrders, payPartialOrder };
 };
