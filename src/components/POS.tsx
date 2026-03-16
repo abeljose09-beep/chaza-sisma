@@ -142,10 +142,16 @@ export const POS: React.FC = () => {
       </div>
 
       <style>{`
+        .pos-container { gap: 1rem; }
         @media (max-width: 900px) {
           .pos-container { grid-template-columns: 1fr !important; }
           .cart-sidebar { order: -1; }
           .card { height: auto !important; position: relative !important; top: 0 !important; }
+        }
+        @media (max-width: 768px) {
+          .pos-container .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important; gap: 0.5rem !important; }
+          .product-card { padding: 0.6rem !important; }
+          .product-card p { font-size: 0.8rem !important; }
         }
       `}</style>
     </div>

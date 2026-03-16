@@ -17,7 +17,6 @@ export const App: React.FC = () => {
   );
   const { user } = useStore();
   
-  // Initialize Firebase sync
   useFirebase();
 
   useEffect(() => {
@@ -30,14 +29,14 @@ export const App: React.FC = () => {
   if (!user) {
     return (
       <div className="app-container">
-        <div style={{ position: 'fixed', top: '1.5rem', right: '1.5rem' }}>
-          <button className="btn btn-ghost" onClick={toggleTheme} style={{ padding: '0.75rem', borderRadius: '50%' }}>
-            {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
+        <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 10 }}>
+          <button className="btn btn-ghost" onClick={toggleTheme} style={{ padding: '0.5rem', borderRadius: '50%' }}>
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
         </div>
-        <div style={{ textAlign: 'center', marginTop: '5rem', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: '900', color: 'var(--primary)', margin: 0, letterSpacing: '-1px' }}>Sisma Chaza</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '0.5rem' }}>Mini Tienda de Pedidos</p>
+        <div style={{ textAlign: 'center', marginTop: '4rem', marginBottom: '1.5rem' }}>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: '900', color: 'var(--primary)', margin: 0, letterSpacing: '-1px' }}>Sisma Chaza</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>Mini Tienda de Pedidos</p>
         </div>
         <Login />
       </div>
@@ -46,61 +45,44 @@ export const App: React.FC = () => {
 
   const isAtLeastAdmin = user.role === 'admin' || user.role === 'superuser';
 
+  const tabs = [
+    { id: 'pos' as const, icon: ShoppingCart, label: 'Comprar' },
+    { id: 'inventory' as const, icon: Package, label: 'Inventario' },
+    { id: 'orders' as const, icon: Receipt, label: isAtLeastAdmin ? 'Cuentas' : 'Mis Cuentas' },
+    ...(isAtLeastAdmin ? [
+      { id: 'clients' as const, icon: Users, label: 'Clientes' },
+      { id: 'reports' as const, icon: TrendingUp, label: 'Informes' },
+    ] : []),
+  ];
+
   return (
-    <div className="app-container">
-      <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem 0', alignItems: 'center', gap: '1rem' }}>
-        <button className="btn btn-ghost" onClick={toggleTheme} style={{ padding: '0.5rem', borderRadius: '50%' }}>
-          {theme === 'light' ? <Moon size={22} /> : <Sun size={22} />}
-        </button>
-        <Login />
+    <div className="app-shell">
+      {/* Top Bar */}
+      <header className="top-bar">
+        <h1 className="brand-name">Sisma Chaza</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button className="btn-icon" onClick={toggleTheme}>
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <Login />
+        </div>
       </header>
 
-      <nav className="nav animate-fade-in" style={{ backgroundColor: 'var(--surface)', padding: '1.5rem', borderRadius: '24px', marginBottom: '2rem', border: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--primary)', margin: 0 }}>Sisma Chaza</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <button 
-            className={`btn ${activeTab === 'pos' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('pos')}
+      {/* Desktop Nav (hidden on mobile) */}
+      <nav className="desktop-nav">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
           >
-            <ShoppingCart size={18} /> <span className="hide-mobile">Comprar</span>
+            <tab.icon size={18} /> {tab.label}
           </button>
-          
-          <button 
-            className={`btn ${activeTab === 'inventory' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('inventory')}
-          >
-            <Package size={18} /> <span className="hide-mobile">Inventario</span>
-          </button>
-
-          <button 
-            className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            <Receipt size={18} /> <span className="hide-mobile">{isAtLeastAdmin ? 'Cuentas' : 'Mis Cuentas'}</span>
-          </button>
-
-          {isAtLeastAdmin && (
-            <>
-              <button 
-                className={`btn ${activeTab === 'clients' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setActiveTab('clients')}
-              >
-                <Users size={18} /> <span className="hide-mobile">Clientes</span>
-              </button>
-              <button 
-                className={`btn ${activeTab === 'reports' ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setActiveTab('reports')}
-              >
-                <TrendingUp size={18} /> <span className="hide-mobile">Informes</span>
-              </button>
-            </>
-          )}
-        </div>
+        ))}
       </nav>
 
-      <main className="animate-fade-in" style={{ flex: 1, paddingBottom: '3rem' }}>
+      {/* Main Content */}
+      <main className="main-content animate-fade-in">
         {activeTab === 'pos' && <POS />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'clients' && <Clients />}
@@ -108,13 +90,19 @@ export const App: React.FC = () => {
         {activeTab === 'reports' && <Reports />}
       </main>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .hide-mobile { display: none; }
-          .nav { flex-direction: column; gap: 1.5rem; align-items: center; text-align: center; }
-          .btn { flex: 1; padding: 0.75rem; font-size: 0.8rem; }
-        }
-      `}</style>
+      {/* Bottom Tab Bar (mobile only) */}
+      <nav className="bottom-nav">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`bottom-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <tab.icon size={20} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 };
