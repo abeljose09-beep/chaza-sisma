@@ -2,11 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { TrendingUp, DollarSign, Package, Calendar } from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
 
 export const Reports: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [timeframe, setTimeframe] = useState<'today' | 'week'>('today');
+  const { user } = useStore();
+  const { resetAllDebts } = useFirebase();
 
   useEffect(() => {
     const q = query(collection(db, 'orders'));
@@ -46,25 +50,49 @@ export const Reports: React.FC = () => {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5);
 
+  const isSuperuser = user?.role === 'superuser';
+
+  const handleResetAllDebts = async () => {
+    if (!confirm('¿Resetear TODOS los saldos de clientes a $0? Esta acción no se puede deshacer.')) return;
+    try {
+      await resetAllDebts();
+      alert('Saldos reseteados a $0 correctamente.');
+    } catch (error) {
+      alert('Error al resetear saldos.');
+      console.error(error);
+    }
+  };
+
   return (
     <div className="reports-section animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h2>Reportes de Ventas</h2>
-        <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', background: 'var(--border)', padding: '0.25rem', borderRadius: '12px' }}>
-          <button 
-            className={`btn ${timeframe === 'today' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ padding: '0.5rem 1rem' }}
-            onClick={() => setTimeframe('today')}
-          >
-            Hoy
-          </button>
-          <button 
-            className={`btn ${timeframe === 'week' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ padding: '0.5rem 1rem' }}
-            onClick={() => setTimeframe('week')}
-          >
-            Semana
-          </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {isSuperuser && (
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: '0.8rem', color: '#ef4444', borderColor: '#ef4444' }}
+              onClick={handleResetAllDebts}
+            >
+              Resetear saldos a $0
+            </button>
+          )}
+          <div className="btn-group" style={{ display: 'flex', gap: '0.25rem', background: 'var(--border)', padding: '0.25rem', borderRadius: '12px' }}>
+            <button 
+              className={`btn ${timeframe === 'today' ? 'btn-primary' : 'btn-ghost'}`} 
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => setTimeframe('today')}
+            >
+              Hoy
+            </button>
+            <button 
+              className={`btn ${timeframe === 'week' ? 'btn-primary' : 'btn-ghost'}`} 
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => setTimeframe('week')}
+            >
+              Semana
+            </button>
+          </div>
         </div>
       </div>
 
