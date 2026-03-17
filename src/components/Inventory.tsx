@@ -213,13 +213,17 @@ export const Inventory: React.FC = () => {
                   {p.stock} uds
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.2rem', alignItems: 'flex-start' }}>
                 <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Venta: ${p.price.toLocaleString()}</p>
-                {isAdmin && p.cost > 0 && (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
-                    Costo: ${p.cost.toLocaleString()}
-                  </p>
-                )}
+                {isAdmin && p.cost > 0 && (() => {
+                  const margin = (((p.price - p.cost) / p.price) * 100).toFixed(1);
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Costo: ${p.cost.toLocaleString()}</p>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#10b981' }}>Margen: {margin}%</p>
+                    </div>
+                  );
+                })()}
               </div>
               {isAdmin && (
                 <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.5rem' }}>

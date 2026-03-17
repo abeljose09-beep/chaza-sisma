@@ -13,8 +13,11 @@ export const Reports: React.FC = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const { user } = useStore();
+  const { user, products } = useStore();
   const { resetAllDebts, deleteAllOrders } = useFirebase();
+
+  // Build a quick lookup map: productId -> current cost
+  const productCostMap = Object.fromEntries(products.map(p => [p.id, p.cost || 0]));
 
   useEffect(() => {
     const q = query(collection(db, 'orders'));
@@ -50,16 +53,24 @@ export const Reports: React.FC = () => {
   });
 
   const totalCost = filteredOrders.reduce((sum, o) => {
-    return sum + (o.items || []).reduce((itemSum, item) => itemSum + ((item.cost || 0) * item.quantity), 0);
+    return sum + (o.items || []).reduce((itemSum, item) => {
+      // Prefer cost stored at time of order; fall back to current product cost for legacy orders
+      const unitCost = item.cost || productCostMap[item.id] || 0;
+      return itemSum + (unitCost * item.quantity);
+    }, 0);
   }, 0);
 
+  const totalRevenue = filteredOrders.reduce((sum, o) => sum + o.total, 0);
+  const profitMargin = totalRevenue > 0 ? (((totalRevenue - totalCost) / totalRevenue) * 100).toFixed(1) : '0.0';
+
   const stats = {
-    totalRevenue: filteredOrders.reduce((sum, o) => sum + o.total, 0),
+    totalRevenue,
     totalOrders: filteredOrders.length,
     pendingCollection: filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.total - (o.paidAmount || 0)), 0),
     paidRevenue: filteredOrders.filter(o => o.status === 'paid').reduce((sum, o) => sum + o.total, 0) + filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.paidAmount || 0), 0),
     totalCost,
-    totalProfit: filteredOrders.reduce((sum, o) => sum + o.total, 0) - totalCost
+    totalProfit: totalRevenue - totalCost,
+    profitMargin
   };
 
   // Calculate most sold products
@@ -233,8 +244,15 @@ export const Reports: React.FC = () => {
               <Wallet size={24} />
             </div>
             <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ganancias Neta</p>
-              <h3 style={{ fontSize: '1.5rem' }}>${stats.totalProfit.toLocaleString()}</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ganancia Neta</p>
+              <h3 style={{ fontSize: '1.5rem', color: stats.totalProfit >= 0 ? '#8b5cf6' : '#ef4444' }}>
+                ${stats.totalProfit.toLocaleString()}
+              </h3>
+              {totalCost > 0 && (
+                <p style={{ fontSize: '0.75rem', fontWeight: 'bold', marginTop: '0.1rem', color: stats.totalProfit >= 0 ? '#10b981' : '#ef4444' }}>
+                  Margen: {stats.profitMargin}%
+                </p>
+              )}
             </div>
           </div>
         </div>
