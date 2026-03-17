@@ -11,6 +11,7 @@ export interface UserProfile {
 export interface Product {
   id: string;
   name: string;
+  cost: number;
   price: number;
   stock: number;
   category?: string;

@@ -17,6 +17,7 @@ export const Inventory: React.FC = () => {
   const [formData, setFormData] = useState({ 
     name: '', 
     price: 0, 
+    cost: 0,
     stock: 0, 
     category: '', 
     imageUrl: '' 
@@ -65,7 +66,7 @@ export const Inventory: React.FC = () => {
     } else {
       await addProduct(formData);
     }
-    setFormData({ name: '', price: 0, stock: 0, category: '', imageUrl: '' });
+    setFormData({ name: '', price: 0, cost: 0, stock: 0, category: '', imageUrl: '' });
     nameInputRef.current?.focus();
     if (editingId) setShowAdd(false);
   };
@@ -75,6 +76,7 @@ export const Inventory: React.FC = () => {
     setFormData({
       name: product.name,
       price: product.price,
+      cost: product.cost || 0,
       stock: product.stock,
       category: product.category || '',
       imageUrl: product.imageUrl || ''
@@ -99,7 +101,7 @@ export const Inventory: React.FC = () => {
         {isAdmin && (
           <button className="btn btn-primary" onClick={() => {
             setEditingId(null);
-            setFormData({ name: '', price: 0, stock: 0, category: '', imageUrl: '' });
+            setFormData({ name: '', price: 0, cost: 0, stock: 0, category: '', imageUrl: '' });
             setShowAdd(!showAdd);
           }}>
             <Plus size={20} /> Nuevo Artículo
@@ -121,7 +123,7 @@ export const Inventory: React.FC = () => {
               />
             </div>
             <div>
-              <label>Precio Unitario</label>
+              <label>Precio de Venta</label>
               <input 
                 type="number" 
                 required 
@@ -130,7 +132,16 @@ export const Inventory: React.FC = () => {
               />
             </div>
             <div>
-              <label>Cantidad Initial / Stock</label>
+              <label>Costo de Compra (Inversión)</label>
+              <input 
+                type="number" 
+                required 
+                value={formData.cost} 
+                onChange={e => setFormData({...formData, cost: Number(e.target.value)})}
+              />
+            </div>
+            <div>
+              <label>Cantidad Inicial / Stock</label>
               <input 
                 type="number" 
                 required 
@@ -202,7 +213,14 @@ export const Inventory: React.FC = () => {
                   {p.stock} uds
                 </span>
               </div>
-              <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>${p.price.toLocaleString()}</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                <p style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Venta: ${p.price.toLocaleString()}</p>
+                {isAdmin && p.cost > 0 && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
+                    Costo: ${p.cost.toLocaleString()}
+                  </p>
+                )}
+              </div>
               {isAdmin && (
                 <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.5rem' }}>
                   <button className="btn btn-ghost" style={{ flex: 1, padding: '0.25rem' }} onClick={() => handleEdit(p)}>

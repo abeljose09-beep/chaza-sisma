@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, onSnapshot } from 'firebase/firestore';
-import { TrendingUp, DollarSign, Package, Calendar, Printer } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, Calendar, Printer, Wallet } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
@@ -49,11 +49,17 @@ export const Reports: React.FC = () => {
     return true;
   });
 
+  const totalCost = filteredOrders.reduce((sum, o) => {
+    return sum + (o.items || []).reduce((itemSum, item) => itemSum + ((item.cost || 0) * item.quantity), 0);
+  }, 0);
+
   const stats = {
     totalRevenue: filteredOrders.reduce((sum, o) => sum + o.total, 0),
     totalOrders: filteredOrders.length,
     pendingCollection: filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.total - (o.paidAmount || 0)), 0),
-    paidRevenue: filteredOrders.filter(o => o.status === 'paid').reduce((sum, o) => sum + o.total, 0) + filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.paidAmount || 0), 0)
+    paidRevenue: filteredOrders.filter(o => o.status === 'paid').reduce((sum, o) => sum + o.total, 0) + filteredOrders.filter(o => o.status === 'pending').reduce((sum, o) => sum + (o.paidAmount || 0), 0),
+    totalCost,
+    totalProfit: filteredOrders.reduce((sum, o) => sum + o.total, 0) - totalCost
   };
 
   // Calculate most sold products
@@ -217,6 +223,18 @@ export const Reports: React.FC = () => {
             <div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Por Cobrar</p>
               <h3 style={{ fontSize: '1.5rem' }}>${stats.pendingCollection.toLocaleString()}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ borderLeft: '4px solid #8b5cf6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ background: '#ede9fe', padding: '0.75rem', borderRadius: '12px', color: '#8b5cf6' }}>
+              <Wallet size={24} />
+            </div>
+            <div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Ganancias Neta</p>
+              <h3 style={{ fontSize: '1.5rem' }}>${stats.totalProfit.toLocaleString()}</h3>
             </div>
           </div>
         </div>
