@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
-import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon, Check, DollarSign } from 'lucide-react';
+import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon, Check, DollarSign, Trash2 } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -12,8 +12,9 @@ export const Orders: React.FC = () => {
   const [selectedOrders, setSelectedOrders] = useState<Record<string, Set<string>>>({});
   const [partialPayOrderId, setPartialPayOrderId] = useState<string | null>(null);
   const [partialAmount, setPartialAmount] = useState<string>('');
+  const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null);
   const { clients, user } = useStore();
-  const { markMultipleOrdersAsPaid, payPartialOrder } = useFirebase();
+  const { markMultipleOrdersAsPaid, payPartialOrder, deleteOrder } = useFirebase();
 
   useEffect(() => {
     let q;
@@ -128,6 +129,20 @@ export const Orders: React.FC = () => {
       alert("Error al guardar el abono.");
     }
   };
+
+  const handleDeleteOrder = async (e: React.MouseEvent, order: Order) => {
+    e.stopPropagation();
+    try {
+      await deleteOrder(order.id, order.clientId);
+      setConfirmDeleteOrderId(null);
+      // Removed alert to avoid blocking interactions.
+    } catch (error) {
+      console.error(error);
+      alert("Error al eliminar el pedido.");
+    }
+  };
+
+  const isSuperuser = user?.role === 'superuser';
 
   return (
     <div className="orders-section">
@@ -245,6 +260,31 @@ export const Orders: React.FC = () => {
                           }}>
                             {isPending ? 'PEND' : 'PAGADO'}
                           </span>
+                          
+                          {/* Botón de Borrar (Sólo Superuser) */}
+                          {isSuperuser && (
+                            <div style={{ marginLeft: '0.2rem' }} onClick={e => e.stopPropagation()}>
+                              {confirmDeleteOrderId === order.id ? (
+                                <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center', background: '#fee2e2', padding: '0.1rem 0.2rem', borderRadius: '4px' }}>
+                                  <span style={{ fontSize: '0.65rem', color: '#ef4444', fontWeight: 'bold' }}>¿Borrar?</span>
+                                  <button style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '0.1rem 0.3rem', cursor: 'pointer', fontSize: '0.65rem' }} onClick={(e) => handleDeleteOrder(e, order)}>Sí</button>
+                                  <button style={{ background: '#ccc', color: 'black', border: 'none', borderRadius: '4px', padding: '0.1rem 0.3rem', cursor: 'pointer', fontSize: '0.65rem' }} onClick={() => setConfirmDeleteOrderId(null)}>No</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteOrderId(order.id)}
+                                  title="Eliminar pedido"
+                                  style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    color: '#ef4444', padding: '0.1rem', display: 'flex',
+                                    alignItems: 'center', borderRadius: '4px'
+                                  }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <span style={{ fontWeight: '800', fontSize: '0.85rem' }}>${(order.total - (order.paidAmount || 0)).toLocaleString()}</span>

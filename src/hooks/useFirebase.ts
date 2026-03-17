@@ -120,11 +120,27 @@ export const useFirebase = () => {
           const orderData = orderSnap.data();
           const pendingDebt = orderData.status === 'pending' ? (orderData.total - (orderData.paidAmount || 0)) : 0;
           
+          // Leer productos para restaurar stock
+          const items = orderData.items || [];
+          const productSnaps = [];
+          for (const item of items) {
+            const pRef = doc(db, 'products', item.id);
+            productSnaps.push({ ref: pRef, snap: await transaction.get(pRef), qty: item.quantity });
+          }
+
           transaction.delete(orderRef);
 
           if (pendingDebt > 0 && clientSnap.exists()) {
             const currentDebt = clientSnap.data().debt || 0;
             transaction.update(clientRef, { debt: Math.max(0, currentDebt - pendingDebt) });
+          }
+
+          // Restaurar stock de los items borrados
+          for (const { ref, snap, qty } of productSnaps) {
+            if (snap.exists()) {
+              const currentStock = snap.data().stock || 0;
+              transaction.update(ref, { stock: currentStock + qty });
+            }
           }
         }
       });
