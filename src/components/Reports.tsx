@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, onSnapshot } from 'firebase/firestore';
-import { TrendingUp, DollarSign, Package, Calendar } from 'lucide-react';
+import { TrendingUp, DollarSign, Package, Calendar, Printer } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
 
 export const Reports: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [timeframe, setTimeframe] = useState<'today' | 'week'>('today');
+  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'custom'>('today');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const { user } = useStore();
@@ -29,8 +31,22 @@ export const Reports: React.FC = () => {
   
   const filteredOrders = orders.filter(order => {
     if (timeframe === 'today') return order.createdAt >= todayStart;
-    const weekAgo = todayStart - (7 * 24 * 60 * 60 * 1000);
-    return order.createdAt >= weekAgo;
+    if (timeframe === 'week') return order.createdAt >= todayStart - (7 * 24 * 60 * 60 * 1000);
+    if (timeframe === 'month') return order.createdAt >= todayStart - (30 * 24 * 60 * 60 * 1000);
+    
+    if (timeframe === 'custom') {
+      let isValid = true;
+      if (startDate) {
+        const startTimestamp = new Date(startDate).getTime();
+        if (order.createdAt < startTimestamp) isValid = false;
+      }
+      if (endDate) {
+        const endTimestamp = new Date(endDate).getTime() + (24 * 60 * 60 * 1000) - 1; // End of selected day
+        if (order.createdAt > endTimestamp) isValid = false;
+      }
+      return isValid;
+    }
+    return true;
   });
 
   const stats = {
@@ -130,9 +146,43 @@ export const Reports: React.FC = () => {
             >
               Semana
             </button>
+            <button 
+              className={`btn ${timeframe === 'month' ? 'btn-primary' : 'btn-ghost'}`} 
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => setTimeframe('month')}
+            >
+              Mes
+            </button>
+            <button 
+              className={`btn ${timeframe === 'custom' ? 'btn-primary' : 'btn-ghost'}`} 
+              style={{ padding: '0.5rem 1rem' }}
+              onClick={() => setTimeframe('custom')}
+            >
+              Rango
+            </button>
           </div>
+          <button
+            className="btn btn-primary print-hide"
+            style={{ padding: '0.5rem 1rem', background: '#002d4b' }}
+            onClick={() => window.print()}
+          >
+            <Printer size={16} /> PDF
+          </button>
         </div>
       </div>
+
+      {timeframe === 'custom' && (
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', background: 'var(--surface)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }} className="print-hide">
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Desde:</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Hasta:</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '2rem' }}>
         <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>

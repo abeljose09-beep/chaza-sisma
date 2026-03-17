@@ -309,3 +309,30 @@ input:focus {
   .bottom-tab { font-size: 0.55rem; }
   .bottom-tab svg { width: 18px; height: 18px; }
 }
+
+/* ===================== PRINT / PDF ===================== */
+@media print {
+  .top-bar, .desktop-nav, .bottom-nav, .print-hide {
+    display: none !important;
+  }
+  .app-shell {
+    max-width: 100%;
+    margin: 0;
+  }
+  .main-content {
+    padding: 0;
+  }
+  body, html {
+    background: white;
+    color: black;
+  }
+  .card {
+    border: 1px solid #ccc;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
