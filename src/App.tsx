@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Package, ShoppingCart, Receipt, TrendingUp, Sun, Moon } from 'lucide-react';
+import { Users, Package, ShoppingCart, Receipt, TrendingUp, Sun, Moon, Trophy } from 'lucide-react';
 import { Inventory } from './components/Inventory';
 import { Clients } from './components/Clients';
 import { POS } from './components/POS';
 import { Orders } from './components/Orders';
 import { Login } from './components/Login';
 import { Reports } from './components/Reports';
+import { WeeklyRanking } from './components/WeeklyRanking';
 import { useStore } from './store/useStore';
 import { useFirebase } from './hooks/useFirebase';
 import './styles/main.css';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'clients' | 'orders' | 'reports'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'inventory' | 'clients' | 'orders' | 'reports' | 'ranking'>('pos');
   const [theme, setTheme] = useState<'light' | 'dark'>(
     (localStorage.getItem('theme') as 'light' | 'dark') || 'light'
   );
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
     { id: 'pos' as const, icon: ShoppingCart, label: 'Comprar' },
     { id: 'inventory' as const, icon: Package, label: 'Inventario' },
     { id: 'orders' as const, icon: Receipt, label: isAtLeastAdmin ? 'Cuentas' : 'Mis Cuentas' },
+    { id: 'ranking' as const, icon: Trophy, label: 'Ranking' },
     ...(isAtLeastAdmin ? [
       { id: 'clients' as const, icon: Users, label: 'Clientes' },
       { id: 'reports' as const, icon: TrendingUp, label: 'Informes' },
@@ -88,6 +90,7 @@ export const App: React.FC = () => {
         {activeTab === 'clients' && <Clients />}
         {activeTab === 'orders' && <Orders />}
         {activeTab === 'reports' && <Reports />}
+        {activeTab === 'ranking' && <WeeklyRanking />}
       </main>
 
       {/* Bottom Tab Bar (mobile only) */}
