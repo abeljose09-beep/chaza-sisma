@@ -230,6 +230,10 @@ export const useFirebase = () => {
     await setDoc(newRef, { ...client, uid: newRef.id, role: 'client', debt: 0 });
   };
 
+  const updateClient = async (uid: string, updates: { name: string; email: string; phone: string }) => {
+    await updateDoc(doc(db, 'users', uid), updates);
+  };
+
   const resetAllDebts = async () => {
     try {
       const q = query(collection(db, 'users'), where('role', '==', 'client'));
@@ -281,5 +285,5 @@ export const useFirebase = () => {
     }
   };
 
-  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts, deleteAllOrders, payPartialOrder };
+  return { addProduct, updateProduct, deleteProduct, addOrder, addClient, updateClient, markMultipleOrdersAsPaid, deleteOrder, resetAllDebts, deleteAllOrders, payPartialOrder };
 };

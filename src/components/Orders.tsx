@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
 import type { Order } from '../types';
-import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon, Check, DollarSign, Trash2 } from 'lucide-react';
+import { CheckCircle, Clock, Receipt, Hash, History as HistoryIcon, Check, DollarSign, Trash2, MessageCircle } from 'lucide-react';
 
 export const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -15,6 +15,80 @@ export const Orders: React.FC = () => {
   const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null);
   const { clients, user } = useStore();
   const { markMultipleOrdersAsPaid, payPartialOrder, deleteOrder } = useFirebase();
+
+  /** Formatea el teléfono colombiano para wa.me (código país 57) */
+  const formatPhoneForWA = (phone: string): string => {
+    // Quitar todo lo que no sea número
+    const digits = phone.replace(/\D/g, '');
+    // Si ya empieza con 57 y tiene 12 dígitos, está bien
+    if (digits.startsWith('57') && digits.length === 12) return digits;
+    // Si empieza con 0, reemplazar por 57
+    if (digits.startsWith('0')) return '57' + digits.slice(1);
+    // Si tiene 10 dígitos (celular colombiano), agregar 57
+    if (digits.length === 10) return '57' + digits;
+    return '57' + digits;
+  };
+
+  /** Construye el mensaje de WhatsApp con los pedidos pendientes */
+  const buildWhatsAppMessage = (clientId: string, pendingOrders: typeof orders): string => {
+    const name = getClientName(clientId);
+    const lines: string[] = [];
+
+    // Emojis generados en runtime con fromCodePoint (evita problemas de encoding)
+    const E = {
+      clipboard : String.fromCodePoint(0x1F4CB), // 📋
+      dollar    : String.fromCodePoint(0x1F4B5), // 💵
+      red       : String.fromCodePoint(0x1F534), // 🔴
+      money     : String.fromCodePoint(0x1F4B0), // 💰
+      card      : String.fromCodePoint(0x1F4B3), // 💳
+      purple    : String.fromCodePoint(0x1F7E3), // 🟣
+      key       : String.fromCodePoint(0x1F511), // 🔑
+      pray      : String.fromCodePoint(0x1F64F), // 🙏
+      bullet    : '\u2022',                       // •
+    };
+
+    lines.push(`${E.clipboard} Hola *${name}*, tienes cuenta(s) pendiente(s) en *Sisma Chaza*:\n`);
+
+    let grandTotal = 0;
+    pendingOrders.forEach((order, i) => {
+      const remaining = order.total - (order.paidAmount || 0);
+      grandTotal += remaining;
+      lines.push(`*Pedido #${order.orderNum || (i + 1)}*`);
+      (order.items || []).forEach(item => {
+        lines.push(`  ${E.bullet} ${item.quantity}x ${item.name}`);
+      });
+      if (order.paidAmount) {
+        lines.push(`  ${E.dollar} Total: $${order.total.toLocaleString('es-CO')} (Abonado: $${order.paidAmount.toLocaleString('es-CO')})`);
+        lines.push(`  ${E.red} Saldo: $${remaining.toLocaleString('es-CO')}`);
+      } else {
+        lines.push(`  ${E.dollar} $${remaining.toLocaleString('es-CO')}`);
+      }
+      lines.push('');
+    });
+
+    lines.push(`${E.money} *Total pendiente: $${grandTotal.toLocaleString('es-CO')}*`);
+    lines.push('');
+    lines.push(`${E.card} *Puedes pagar por:*`);
+    lines.push(`  ${E.purple} Nequi: *3008508753*`);
+    lines.push(`  ${E.key} Llave: *3008508753*`);
+    lines.push('');
+    lines.push(`Por favor cancela a la mayor brevedad. ¡Gracias! ${E.pray}`);
+
+    return lines.join('\n');
+  };
+
+  /** Abre WhatsApp con el mensaje pre-llenado */
+  const sendWhatsApp = (clientId: string, pendingOrders: typeof orders) => {
+    const client = clients.find(c => c.uid === clientId);
+    if (!client?.phone) {
+      alert(`El cliente ${getClientName(clientId)} no tiene teléfono registrado.\nAgrégalo en Clientes → editar perfil.`);
+      return;
+    }
+    const phone = formatPhoneForWA(client.phone);
+    const message = buildWhatsAppMessage(clientId, pendingOrders);
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
 
   useEffect(() => {
     let q;
@@ -338,7 +412,7 @@ export const Orders: React.FC = () => {
                 })}
               </div>
 
-              {/* Pay Button */}
+              {/* Pay Button + WhatsApp */}
               {isAtLeastAdmin && pendingOrders.length > 0 && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
                   {sel.size > 0 && (
@@ -348,7 +422,7 @@ export const Orders: React.FC = () => {
                   )}
                   <button
                     className="btn btn-primary"
-                    style={{ width: '100%', padding: '0.65rem', fontSize: '0.8rem' }}
+                    style={{ width: '100%', padding: '0.65rem', fontSize: '0.8rem', marginBottom: '0.5rem' }}
                     onClick={() => handlePaySelected(clientId, clientOrders)}
                     disabled={sel.size === 0}
                   >
@@ -357,6 +431,38 @@ export const Orders: React.FC = () => {
                       ? `Pagar Selección ($${selectedTotal.toLocaleString()})`
                       : 'Selecciona pedidos para pagar'
                     }
+                  </button>
+                  {/* Botón WhatsApp */}
+                  <button
+                    onClick={() => sendWhatsApp(clientId, pendingOrders)}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      border: 'none',
+                      borderRadius: 'var(--radius)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                      color: 'white',
+                      boxShadow: '0 2px 8px rgba(37,211,102,0.3)',
+                      transition: 'filter 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.1)')}
+                    onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
+                    title={clients.find(c => c.uid === clientId)?.phone
+                      ? `Enviar cuenta por WhatsApp a ${getClientName(clientId)}`
+                      : 'Sin teléfono registrado'}
+                  >
+                    <MessageCircle size={15} />
+                    Cobrar por WhatsApp
+                    {!clients.find(c => c.uid === clientId)?.phone && (
+                      <span style={{ fontSize: '0.65rem', opacity: 0.8, marginLeft: '0.2rem' }}>⚠ Sin tel.</span>
+                    )}
                   </button>
                 </div>
               )}

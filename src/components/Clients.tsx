@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { useFirebase } from '../hooks/useFirebase';
-import { UserPlus, Phone, Mail, History, Trash2 } from 'lucide-react';
+import { UserPlus, Phone, Mail, History, Trash2, Pencil, X, Check } from 'lucide-react';
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import type { Order } from '../types';
 
 export const Clients: React.FC = () => {
   const { clients, user } = useStore();
-  const { addClient, deleteOrder, resetAllDebts } = useFirebase();
+  const { addClient, deleteOrder, resetAllDebts, updateClient } = useFirebase();
   const [showAdd, setShowAdd] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '' });
@@ -16,12 +16,41 @@ export const Clients: React.FC = () => {
   const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null);
   const [clientHistory, setClientHistory] = useState<Order[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  // Edición inline
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     await addClient(newClient);
     setNewClient({ name: '', email: '', phone: '' });
     setShowAdd(false);
+  };
+
+  const startEdit = (client: typeof clients[0]) => {
+    setEditingClientId(client.uid);
+    setEditForm({ name: client.name, email: client.email, phone: client.phone || '' });
+  };
+
+  const cancelEdit = () => {
+    setEditingClientId(null);
+    setEditForm({ name: '', email: '', phone: '' });
+  };
+
+  const handleSaveEdit = async (uid: string) => {
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      return alert('El nombre y correo son obligatorios.');
+    }
+    setSavingEdit(true);
+    try {
+      await updateClient(uid, editForm);
+      cancelEdit();
+    } catch (err) {
+      alert('Error al guardar los cambios.');
+      console.error(err);
+    }
+    setSavingEdit(false);
   };
 
   const fetchHistory = async (clientId: string) => {
@@ -202,30 +231,108 @@ export const Clients: React.FC = () => {
         <div className="grid">
           {clients.map(client => (
             <div key={client.uid} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              {editingClientId === client.uid ? (
+                /* ===== MODO EDICIÓN ===== */
                 <div>
-                  <h3 style={{ marginBottom: '0.5rem' }}>{client.name}</h3>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    <Mail size={14} /> {client.email}
-                  </p>
-                  {client.phone && (
-                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
-                      <Phone size={14} /> {client.phone}
-                    </p>
-                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <p style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--primary)' }}>Editando cliente</p>
+                    <button onClick={cancelEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Nombre</label>
+                      <input
+                        value={editForm.name}
+                        onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                        placeholder="Nombre completo"
+                        style={{ fontSize: '0.85rem', padding: '0.45rem 0.65rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Correo</label>
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                        placeholder="correo@ejemplo.com"
+                        style={{ fontSize: '0.85rem', padding: '0.45rem 0.65rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Teléfono WhatsApp</label>
+                      <input
+                        type="tel"
+                        value={editForm.phone}
+                        onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
+                        placeholder="Ej: 3001234567"
+                        style={{ fontSize: '0.85rem', padding: '0.45rem 0.65rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                      <button
+                        className="btn btn-primary"
+                        style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}
+                        onClick={() => handleSaveEdit(client.uid)}
+                        disabled={savingEdit}
+                      >
+                        <Check size={15} /> {savingEdit ? 'Guardando...' : 'Guardar'}
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                        onClick={cancelEdit}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Deuda Actual</p>
-                  <p style={{ fontWeight: 'bold', fontSize: '1.2rem', color: (client.debt || 0) > 0 ? 'var(--danger)' : 'var(--secondary)' }}>
-                    ${(client.debt || 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-ghost" style={{ flex: 1, fontSize: '0.85rem' }} onClick={() => fetchHistory(client.uid)}>
-                  <History size={16} /> Ver Historial
-                </button>
-              </div>
+              ) : (
+                /* ===== MODO VISTA ===== */
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{ marginBottom: '0.35rem', fontSize: '1rem' }}>{client.name}</h3>
+                      <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                        <Mail size={13} /> {client.email}
+                      </p>
+                      {client.phone ? (
+                        <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#25D366', fontSize: '0.82rem', marginTop: '4px', fontWeight: '600' }}>
+                          <Phone size={13} /> {client.phone}
+                        </p>
+                      ) : (
+                        <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontSize: '0.75rem', marginTop: '4px', fontStyle: 'italic' }}>
+                          <Phone size={12} /> Sin teléfono registrado
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deuda</p>
+                      <p style={{ fontWeight: 'bold', fontSize: '1.1rem', color: (client.debt || 0) > 0 ? 'var(--danger)' : 'var(--secondary)' }}>
+                        ${(client.debt || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '1rem', display: 'flex', gap: '0.4rem' }}>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ flex: 1, fontSize: '0.78rem', padding: '0.5rem' }}
+                      onClick={() => fetchHistory(client.uid)}
+                    >
+                      <History size={14} /> Historial
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ flex: 1, fontSize: '0.78rem', padding: '0.5rem', color: 'var(--primary)', borderColor: 'var(--primary)' }}
+                      onClick={() => startEdit(client)}
+                    >
+                      <Pencil size={14} /> Editar
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

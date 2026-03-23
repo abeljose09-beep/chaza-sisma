@@ -61,7 +61,10 @@ export const App: React.FC = () => {
     <div className="app-shell">
       {/* Top Bar */}
       <header className="top-bar">
-        <h1 className="brand-name">Sisma Chaza</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <img src="/logo.png" alt="Logo Sisma Chaza" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '6px' }} />
+          <h1 className="brand-name">Sisma Chaza</h1>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button className="btn-icon" onClick={toggleTheme}>
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
